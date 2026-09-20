@@ -1,5 +1,7 @@
 name: API integration
 on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   integration:
     runs-on: ubuntu-latest
@@ -41,3 +43,39 @@ jobs:
         with:
           name: api-log
           path: api.log
+
+  deploy:
+    needs: integration
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: netscope-production
+      cancel-in-progress: false
+    steps:
+      - name: Deploy tested commit over SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          port="${DEPLOY_PORT:-22}"
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]] || { echo 'Invalid DEPLOY_HOST'; exit 1; }
+          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || { echo 'Invalid DEPLOY_USER'; exit 1; }
+          [[ "$port" =~ ^[0-9]{1,5}$ ]] || { echo 'Invalid DEPLOY_PORT'; exit 1; }
+          umask 077
+          key="$RUNNER_TEMP/netscope-deploy-key"
+          hosts="$RUNNER_TEMP/netscope-known-hosts"
+          trap 'rm -f "$key" "$hosts"' EXIT
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$hosts"
+          ssh -i "$key" -p "$port" \
+            -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$hosts" \
+            -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd /opt/netscope && bash scripts/deploy.sh '$GITHUB_SHA'"

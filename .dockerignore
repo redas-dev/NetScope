@@ -5,5 +5,7 @@
 .vs
 .local
 .env
+.env.*
+backups
 **/appsettings.Local.json
 netscope.client

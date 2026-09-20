@@ -1,5 +1,7 @@
 # NetScope API
 
+Ubuntu / Debian server deployment with host Nginx, Certbot HTTPS and automatic updates after a GitHub push: **[deployment guide](docs/deployment.md)**. Use `compose.production.yaml` for the API and PostgreSQL, and `scripts/setup-nginx.sh` to configure the host proxy; the default `compose.yaml` is for local demonstrations.
+
 Tinklo infrastruktūros registravimo API pagal `IFF-3-2_Domkus_Redas.docx` ir 1–2 laboratorinių darbų reikalavimus. Realizuota vietų, tinklo įrenginių ir klientų hierarchija, 15 CRUD metodų, filtravimas, JWT autentifikacija, savininko teisių tikrinimas ir administratoriaus funkcijos.
 
 Naudojama **ASP.NET Core 10 / C#**, **Entity Framework Core 10**, **PostgreSQL 17**. Šiame etape realizuota tik API. Ankstesnis `netscope.client` ruošinys paliktas kataloge, tačiau nepriklauso sprendimo paleidimui ar kompiliavimui.
@@ -218,16 +220,14 @@ node scripts/demo.mjs
 
 GitHub Actions konfigūracija `.github/workflows/api.yml` kompiliuoja API ir tikrina ją su tikra PostgreSQL tarnyba. OpenAPI failas gaunamas iš veikiančios API, todėl po metodų pakeitimo jį reikia atnaujinti eksportavimo scenarijumi.
 
-Projekte inicializuota vietinė Git saugykla. Pradinis commit dar nesukurtas. Norint išsaugoti projektą ir įkelti į savo sukurtą GitHub / GitLab / Bitbucket saugyklą:
+Git saugykla susieta su `git@github.com:redas-dev/NetScope.git`. Norint išsaugoti pakeitimus ir juos įkelti:
 
 ```powershell
 git add .
-git commit -m "Implement NetScope REST API with JWT and PostgreSQL"
-git branch -M main
-git remote add origin <savo-saugyklos-URL>
+git commit -m "Update NetScope API"
 git push -u origin main
 ```
 
-Nuotolinės saugyklos adresas šiame projekte nenustatytas. Slaptažodžių failai, DB, priklausomybės ir kompiliavimo rezultatai neįtraukiami į Git.
+Slaptažodžių failai, DB, atsarginės kopijos, priklausomybės ir kompiliavimo rezultatai neįtraukiami į Git.
 
 Techninės nuorodos: [Npgsql EF Core 10](https://www.npgsql.org/efcore/release-notes/10.0.html), [ASP.NET Core JWT autentifikacija](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/configure-jwt-bearer-authentication?view=aspnetcore-10.0).

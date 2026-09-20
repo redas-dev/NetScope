@@ -6,6 +6,9 @@
 *.user
 **/Properties/PublishProfiles/
 .env
+.env.*
+!.env.production.example
+backups/
 .local/
 TestResults/
 **/appsettings.Local.json

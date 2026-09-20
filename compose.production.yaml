@@ -1,0 +1,48 @@
+name: netscope-production
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: netscope
+      POSTGRES_USER: netscope
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.production}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U netscope -d netscope"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  api:
+    image: netscope-api:${APP_VERSION:-local}
+    build:
+      context: .
+      dockerfile: NetScope.Server/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8080
+      # Host Nginx reaches the API through the loopback-only published port.
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      AllowedHosts: ${DOMAIN:?Set DOMAIN in .env.production};localhost;127.0.0.1
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=netscope;Username=netscope;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      Jwt__Key: ${JWT_KEY:?Set JWT_KEY in .env.production}
+      Database__AutoMigrate: "true"
+      Seed__DemoData: "false"
+    ports:
+      - "127.0.0.1:5220:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  postgres-data:
