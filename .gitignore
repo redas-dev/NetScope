@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+.vs/
+*.user
+**/Properties/PublishProfiles/
+.env
+.local/
+TestResults/
+**/appsettings.Local.json

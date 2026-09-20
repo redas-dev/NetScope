@@ -1,0 +1,2946 @@
+{
+  "info": {
+    "name": "NetScope - 15 CRUD and JWT authorization",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Run the entire collection in order with zero delay. Creates temporary users and removes them at the end. Requires seeded demo administrator."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5220"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@netscope.local"
+    },
+    {
+      "key": "adminPassword",
+      "value": "NetScopeDemo!2026"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.info.requestName === 'API and PostgreSQL health') {",
+          "  const run = pm.variables.replaceIn('{{$guid}}');",
+          "  pm.collectionVariables.set('ownerEmail', 'demo-' + run + '@example.test');",
+          "  pm.collectionVariables.set('otherEmail', 'other-' + run + '@example.test');",
+          "  pm.collectionVariables.set('password', 'Demo!' + run);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "API and PostgreSQL health",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test(\"status\", () => pm.expect(at(body, \"status\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"healthy\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Protected endpoint without token",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject role escalation during registration",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{ownerEmail}}\",\n  \"password\": \"{{password}}\",\n  \"role\": \"Admin\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Register owner",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{ownerEmail}}\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
+              "pm.collectionVariables.set(\"ownerToken\", at(body, \"accessToken\"));",
+              "pm.collectionVariables.set(\"ownerId\", at(body, \"user.id\"));",
+              "pm.test(\"user.role\", () => pm.expect(at(body, \"user.role\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"User\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Duplicate email",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{ownerEmail}}\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wrong password",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{ownerEmail}}\",\n  \"password\": \"WrongPassword123!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login owner",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{ownerEmail}}\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set(\"ownerToken\", at(body, \"accessToken\"));",
+              "pm.test('JWT role', () => pm.expect(JSON.parse(atob(body.accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role).to.eql(\"User\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Register another user",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{otherEmail}}\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
+              "pm.collectionVariables.set(\"otherToken\", at(body, \"accessToken\"));",
+              "pm.collectionVariables.set(\"otherId\", at(body, \"user.id\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login administrator",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set(\"adminToken\", at(body, \"accessToken\"));",
+              "pm.collectionVariables.set(\"adminId\", at(body, \"user.id\"));",
+              "pm.test('JWT role', () => pm.expect(JSON.parse(atob(body.accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role).to.eql(\"Admin\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Current user",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/auth/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test(\"id\", () => pm.expect(at(body, \"id\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{ownerId}}\\\"\"))));",
+              "pm.test(\"role\", () => pm.expect(at(body, \"role\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"User\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 Create location",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo laboratorija\",\n  \"address\": \"Studentų g. 50, Kaunas\",\n  \"description\": \"Automatinė API demonstracija\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
+              "pm.collectionVariables.set(\"locationId\", at(body, \"id\"));",
+              "pm.test(\"ownerId\", () => pm.expect(at(body, \"ownerId\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{ownerId}}\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 List and filter locations",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations?search=Demo&ownerId={{ownerId}}&pageSize=1"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test(\"total\", () => pm.expect(at(body, \"total\")).to.eql(JSON.parse(pm.variables.replaceIn(\"1\"))));",
+              "pm.test(\"items.0.id\", () => pm.expect(at(body, \"items.0.id\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{locationId}}\\\"\"))));",
+              "pm.test(\"pageSize\", () => pm.expect(at(body, \"pageSize\")).to.eql(JSON.parse(pm.variables.replaceIn(\"1\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Read location",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Demo laboratorija\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Update location",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Atnaujinta laboratorija\",\n  \"address\": \"Studentų g. 50, Kaunas\",\n  \"description\": \"Automatinė API demonstracija\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Atnaujinta laboratorija\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Create device",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
+              "pm.collectionVariables.set(\"deviceId\", at(body, \"id\"));",
+              "pm.test(\"locationId\", () => pm.expect(at(body, \"locationId\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{locationId}}\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 List and filter devices",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices?type=Router&status=Online&search=Demo"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test(\"total\", () => pm.expect(at(body, \"total\")).to.eql(JSON.parse(pm.variables.replaceIn(\"1\"))));",
+              "pm.test(\"items.0.id\", () => pm.expect(at(body, \"items.0.id\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{deviceId}}\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Read device",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test(\"ipAddress\", () => pm.expect(at(body, \"ipAddress\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"10.10.0.1\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Update device",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Maintenance\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test(\"status\", () => pm.expect(at(body, \"status\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Maintenance\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Create client",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
+              "pm.collectionVariables.set(\"clientId\", at(body, \"id\"));",
+              "pm.test(\"deviceId\", () => pm.expect(at(body, \"deviceId\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{deviceId}}\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 List and filter clients",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients?type=Computer&search=Demo"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test(\"total\", () => pm.expect(at(body, \"total\")).to.eql(JSON.parse(pm.variables.replaceIn(\"1\"))));",
+              "pm.test(\"items.0.id\", () => pm.expect(at(body, \"items.0.id\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{clientId}}\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Read client",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Demo kompiuteris\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Update client",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Atnaujintas kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Atnaujintas kompiuteris\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Other user can read locations",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{otherToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Other user can read devices",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{otherToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cannot update another user location",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{otherToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo laboratorija\",\n  \"address\": \"Studentų g. 50, Kaunas\",\n  \"description\": \"Automatinė API demonstracija\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cannot delete another user location",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{otherToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cannot create device in another user location",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{otherToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cannot update another user device",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{otherToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cannot delete another user device",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{otherToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Protect client collection GET",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{otherToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Protect client collection POST",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{otherToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Protect individual client GET",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{otherToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Protect individual client PUT",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{otherToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Protect individual client DELETE",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{otherToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin can read private clients",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin can update another user location",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo laboratorija\",\n  \"address\": \"Studentų g. 50, Kaunas\",\n  \"description\": \"Automatinė API demonstracija\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin can update another user device",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin can update another user client",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject missing required fields",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject blank name",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"   \",\n  \"address\": \"Studentų g. 50, Kaunas\",\n  \"description\": \"Automatinė API demonstracija\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject malformed JSON",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations",
+        "body": {
+          "mode": "raw",
+          "raw": "{bad json",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid IP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"not-an-ip\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid MAC",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"invalid\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid enum",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Invalid\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid pagination",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations?page=0&pageSize=101"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid query filter",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices?status=Invalid"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Duplicate device MAC",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Duplicate client MAC",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unknown location returns 404",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/00000000-0000-0000-0000-000000000000"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unknown device returns 404",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/00000000-0000-0000-0000-000000000000"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unknown client returns 404",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/00000000-0000-0000-0000-000000000000"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create second location for nesting test",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Antra vieta\",\n  \"address\": \"Studentų g. 50, Kaunas\",\n  \"description\": \"Automatinė API demonstracija\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
+              "pm.collectionVariables.set(\"secondLocationId\", at(body, \"id\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Device cannot be accessed under wrong location",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{secondLocationId}}/devices/{{deviceId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Client cannot be accessed under wrong location",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{secondLocationId}}/devices/{{deviceId}}/clients/{{clientId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 Delete client",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+              "pm.test('Empty body', () => pm.expect(pm.response.text()).to.eql(''));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deleted client is absent",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 Delete device",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+              "pm.test('Empty body', () => pm.expect(pm.response.text()).to.eql(''));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deleted device is absent",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 Delete location",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+              "pm.test('Empty body', () => pm.expect(pm.response.text()).to.eql(''));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deleted location is absent",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Non-admin cannot list users",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/users"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Non-admin cannot delete users",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/users/{{otherId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin lists users without password hashes",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/users?search={{ownerEmail}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test(\"total\", () => pm.expect(at(body, \"total\")).to.eql(JSON.parse(pm.variables.replaceIn(\"1\"))));",
+              "pm.test(\"items.0.id\", () => pm.expect(at(body, \"items.0.id\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{ownerId}}\\\"\"))));",
+              "pm.test('No secret fields', () => pm.expect(at(body, \"items.0.passwordHash\")).to.be.undefined);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin cannot delete own account",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/users/{{adminId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Logout owner",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/auth/logout"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+              "pm.test('Empty body', () => pm.expect(pm.response.text()).to.eql(''));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Logged-out JWT is rejected",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/auth/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin deletes owner and remaining location",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/users/{{ownerId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+              "pm.test('Empty body', () => pm.expect(pm.response.text()).to.eql(''));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "User deletion cascades to locations",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/locations/{{secondLocationId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin deletes second user",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/users/{{otherId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+              "pm.test('Empty body', () => pm.expect(pm.response.text()).to.eql(''));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deleted user JWT is rejected",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{otherToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/auth/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Logout administrator",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/auth/logout"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+              "pm.test('Empty body', () => pm.expect(pm.response.text()).to.eql(''));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+**/bin
+**/obj
+**/node_modules
+.git
+.vs
+.local
+.env
+**/appsettings.Local.json
+netscope.client

@@ -1,0 +1,19 @@
+@baseUrl = http://localhost:5220
+@token = paste_accessToken_here
+
+GET {{baseUrl}}/health
+Accept: application/json
+
+###
+
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{"email":"redas@netscope.local","password":"NetScopeDemo!2026"}
+
+### Copy accessToken from login response into @token above
+GET {{baseUrl}}/api/locations
+Authorization: Bearer {{token}}
+
+###
+GET {{baseUrl}}/openapi/v1.json

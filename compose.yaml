@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: netscope
+      POSTGRES_USER: netscope
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-NetScopeLocalDb2026}
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U netscope -d netscope"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  api:
+    build:
+      context: .
+      dockerfile: NetScope.Server/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=netscope;Username=netscope;Password=${POSTGRES_PASSWORD:-NetScopeLocalDb2026}
+      Jwt__Key: ${JWT_KEY:?Run scripts/setup.ps1 or set JWT_KEY in .env}
+      Database__AutoMigrate: "true"
+      Seed__DemoData: "true"
+    ports:
+      - "127.0.0.1:5220:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  postgres-data:

@@ -1,0 +1,43 @@
+name: API integration
+on: [push, pull_request]
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: netscope
+          POSTGRES_USER: netscope
+          POSTGRES_PASSWORD: NetScopeLocalDb2026
+        ports: ['5434:5432']
+        options: >-
+          --health-cmd "pg_isready -U netscope -d netscope"
+          --health-interval 2s --health-timeout 3s --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: dotnet restore NetScope.slnx
+      - run: dotnet build NetScope.slnx --no-restore --configuration Release
+      - name: Run API and integration scenarios
+        shell: bash
+        run: |
+          export Jwt__Key="$(openssl rand -base64 48)"
+          dotnet run --project NetScope.Server --configuration Release --no-build --launch-profile http > api.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:5220/health > /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/demo.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: api-log
+          path: api.log
