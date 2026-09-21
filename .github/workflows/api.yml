@@ -59,7 +59,7 @@ jobs:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST_KEY_FINGERPRINT: ${{ vars.DEPLOY_HOST_KEY_FINGERPRINT || 'SHA256:+KJuxKjIf2FAkMvQbCm2r7oIhlq6TlR+uQ6yOCK49og' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -67,12 +67,19 @@ jobs:
           [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]] || { echo 'Invalid DEPLOY_HOST'; exit 1; }
           [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || { echo 'Invalid DEPLOY_USER'; exit 1; }
           [[ "$port" =~ ^[0-9]{1,5}$ ]] || { echo 'Invalid DEPLOY_PORT'; exit 1; }
+          [[ "$DEPLOY_HOST_KEY_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]] || { echo 'Invalid DEPLOY_HOST_KEY_FINGERPRINT'; exit 1; }
           umask 077
           key="$RUNNER_TEMP/netscope-deploy-key"
           hosts="$RUNNER_TEMP/netscope-known-hosts"
           trap 'rm -f "$key" "$hosts"' EXIT
           printf '%s\n' "$DEPLOY_SSH_KEY" > "$key"
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$hosts"
+          ssh-keyscan -p "$port" -t ed25519 "$DEPLOY_HOST" > "$hosts" 2>/dev/null
+          [[ -s "$hosts" ]] || { echo 'Unable to fetch server host key'; exit 1; }
+          actual_fingerprint="$(ssh-keygen -lf "$hosts" -E sha256 | awk 'NR==1 {print $2}')"
+          [[ "$actual_fingerprint" == "$DEPLOY_HOST_KEY_FINGERPRINT" ]] || {
+            echo "Host key fingerprint mismatch. Expected $DEPLOY_HOST_KEY_FINGERPRINT but got $actual_fingerprint"
+            exit 1
+          }
           ssh -i "$key" -p "$port" \
             -o BatchMode=yes -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$hosts" \

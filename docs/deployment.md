@@ -146,21 +146,20 @@ In GitHub → **Settings → Secrets and variables → Actions → Secrets**, ad
 | `DEPLOY_USER` | `deploy` |
 | `DEPLOY_PORT` | SSH port, usually `22`; optional, defaults to 22 |
 | `DEPLOY_SSH_KEY` | Entire private `netscope-actions` key, including BEGIN/END lines |
-| `DEPLOY_KNOWN_HOSTS` | Verified server SSH host-key entry, as explained below |
 
-Obtain your server's public SSH host key through your trusted server session or hosting console:
+In GitHub → **Settings → Secrets and variables → Actions → Variables**, add:
+
+| Variable | Value |
+| --- | --- |
+| `DEPLOY_HOST_KEY_FINGERPRINT` | Server ED25519 host-key SHA256 fingerprint |
+
+Obtain this fingerprint through your trusted server session or hosting console:
 
 ```bash
-cat /etc/ssh/ssh_host_ed25519_key.pub
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256 | awk '{print $2}'
 ```
 
-For port 22, the `DEPLOY_KNOWN_HOSTS` value is one line:
-
-```text
-YOUR_DEPLOY_HOST ssh-ed25519 AAAAC3...the-complete-public-key...
-```
-
-Use exactly the hostname/IP stored in `DEPLOY_HOST`. For a custom SSH port, the first field must be `[YOUR_DEPLOY_HOST]:PORT`. This is the **server host key**, not either of your login/deploy keys. The workflow validates it; it does not disable host verification.
+The workflow fetches the server's ED25519 host key during each run and requires its fingerprint to match `DEPLOY_HOST_KEY_FINGERPRINT`. If you rebuild or rotate the server SSH host key, update this variable before re-running deployment.
 
 Under the same settings, open **Variables** and add:
 
