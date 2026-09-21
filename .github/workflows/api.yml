@@ -59,7 +59,7 @@ jobs:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_HOST_KEY_FINGERPRINT: ${{ vars.DEPLOY_HOST_KEY_FINGERPRINT || 'SHA256:+KJuxKjIf2FAkMvQbCm2r7oIhlq6TlR+uQ6yOCK49og' }}
+          DEPLOY_HOST_KEY_FINGERPRINT: ${{ vars.DEPLOY_HOST_KEY_FINGERPRINT }}
         shell: bash
         run: |
           set -euo pipefail
