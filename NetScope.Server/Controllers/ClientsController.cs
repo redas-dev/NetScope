@@ -22,7 +22,7 @@ public class ClientsController(NetScopeDbContext db) : ApiControllerBase(db)
         var query = Db.Clients.AsNoTracking().Where(x => x.DeviceId == deviceId);
         if (!string.IsNullOrWhiteSpace(filter.Search)) query = query.Where(x => x.Name.ToLower().Contains(filter.Search.ToLower()) || x.IpAddress.Contains(filter.Search));
         if (type is not null) query = query.Where(x => x.Type == type);
-        return Ok(await Page(query.OrderBy(x => x.Name).ThenBy(x => x.Id), filter, View));
+        return Ok(await Page(query.OrderBy(x => x.Name).ThenBy(x => x.Id), filter, x => View(x, locationId)));
     }
 
     [HttpGet("{clientId:guid}")]
@@ -34,7 +34,7 @@ public class ClientsController(NetScopeDbContext db) : ApiControllerBase(db)
         if (device is null) return NotFound();
         if (!CanManage(device.Location)) return Forbid();
         var client = await Db.Clients.SingleOrDefaultAsync(x => x.Id == clientId && x.DeviceId == deviceId);
-        return client is null ? NotFound() : Ok(View(client));
+        return client is null ? NotFound() : Ok(View(client, locationId));
     }
 
     [HttpPost]
@@ -49,7 +49,7 @@ public class ClientsController(NetScopeDbContext db) : ApiControllerBase(db)
         Assign(client, request);
         Db.Clients.Add(client);
         await Db.SaveChangesAsync();
-        return CreatedAtAction(nameof(Get), new { locationId, deviceId, clientId = client.Id }, View(client));
+        return CreatedAtAction(nameof(Get), new { locationId, deviceId, clientId = client.Id }, View(client, locationId));
     }
 
     [HttpPut("{clientId:guid}")]
@@ -64,7 +64,7 @@ public class ClientsController(NetScopeDbContext db) : ApiControllerBase(db)
         if (client is null) return NotFound();
         Assign(client, request);
         await Db.SaveChangesAsync();
-        return Ok(View(client));
+        return Ok(View(client, locationId));
     }
 
     [HttpDelete("{clientId:guid}")]

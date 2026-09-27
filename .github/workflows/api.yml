@@ -24,6 +24,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - run: npm ci --prefix netscope.client
+      - run: npm run lint --prefix netscope.client
+      - run: npm run build --prefix netscope.client
+      - run: node scripts/copy-ui.mjs
+      - name: Install browser for UI tests
+        working-directory: netscope.client
+        run: npx playwright install --with-deps chromium
       - run: dotnet restore NetScope.slnx
       - run: dotnet build NetScope.slnx --no-restore --configuration Release
       - name: Run API and integration scenarios
@@ -38,11 +45,15 @@ jobs:
             sleep 1
           done
           node scripts/demo.mjs
+          npm run test:e2e --prefix netscope.client
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: api-log
-          path: api.log
+          include-hidden-files: true
+          path: |
+            api.log
+            .local/ui-results
 
   deploy:
     needs: integration

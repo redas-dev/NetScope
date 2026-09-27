@@ -1,6 +1,8 @@
 **/bin
 **/obj
+**/dist
 **/node_modules
+NetScope.Server/wwwroot
 .git
 .vs
 .local
@@ -8,4 +10,3 @@
 .env.*
 backups
 **/appsettings.Local.json
-netscope.client

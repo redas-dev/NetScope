@@ -1,12 +1,28 @@
 # Deploy NetScope to Ubuntu or Debian
 
-This setup runs the API and PostgreSQL with Docker Compose and exposes the API through **Nginx installed on the Ubuntu/Debian host** at `https://api.example.com`. Certbot manages HTTPS certificates. After setup, a push to `main` runs the integration tests in GitHub Actions and deploys that exact commit if they pass. Pull requests only run tests.
+This setup runs the API and PostgreSQL with Docker Compose and exposes the React UI and API through **Nginx installed on the Ubuntu/Debian host** at `https://netscope.redasd.dev`. Certbot manages HTTPS certificates. After setup, a push to `main` runs the integration tests in GitHub Actions and deploys that exact commit if they pass. Pull requests only run tests.
 
-The production files are prepared in this repository. They have not been deployed to your server. Replace the example hostname and IP with your own values.
+The production files include the UI build. This UI revision has not been deployed or verified on the server from this workspace. The domain below is `netscope.redasd.dev`; use your own server IP and certificate email.
+
+## UI on an existing Nginx deployment
+
+The Docker image builds React and serves `wwwroot` from ASP.NET Core. Nginx continues proxying to `127.0.0.1:5220`; no additional Node service, public port, CORS configuration or Nginx restart is needed for UI updates. The public UI is `https://netscope.redasd.dev`, the API stays at `/api/...`, and wireframes are at `/wireframes.html`. Navigation uses hash routes so API 404 responses are preserved.
+
+After committing and pushing the UI changes, the configured GitHub pipeline tests and deploys the exact commit. Alternatively, on the server:
+
+```bash
+cd /opt/netscope
+git fetch origin main
+bash scripts/deploy.sh "$(git rev-parse origin/main)"
+curl --fail https://netscope.redasd.dev/health
+curl --fail https://netscope.redasd.dev/
+```
+
+Open the domain in a browser and log in with your existing account. Production does not seed the local demo credentials. Existing database records remain in the same PostgreSQL volume. For a new cloud VM, follow the setup below.
 
 ## 1. Prepare the server and domain
 
-Install Docker Engine with the Compose plugin using the official instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/) or [Debian](https://docs.docker.com/engine/install/debian/). You do not need Docker Desktop, .NET or Node.js on the server; .NET builds inside Docker.
+Install Docker Engine with the Compose plugin using the official instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/) or [Debian](https://docs.docker.com/engine/install/debian/). You do not need Docker Desktop, .NET or Node.js on the server; React and .NET both build inside Docker.
 
 Install the remaining command-line tools:
 
@@ -25,11 +41,23 @@ sudo mkdir -p /opt/netscope
 sudo chown deploy:deploy /opt/netscope
 sudo -iu deploy
 docker compose version
+docker info
 ```
+
+If deployment reports `unknown flag: --env-file` with the top-level `docker` usage, first run `docker compose version` as `deploy`. This usually means the Compose plugin is missing or unavailable to that user. `--env-file` is a Compose option and must remain in the deployment script.
+
+From an administrator account, with the [official Docker apt repository configured](https://docs.docker.com/compose/install/linux/):
+
+```bash
+sudo apt update
+sudo apt install -y docker-compose-plugin
+```
+
+If apt cannot locate that package, configure Docker's repository using the Ubuntu/Debian installation link above before retrying. Do not substitute the legacy `docker-compose` command: the script needs modern Compose features including `up --wait-timeout`. Verify `docker compose version` and `docker info` from the `deploy` user's SSH session, then rerun deployment. If you just changed group membership, reconnect first. The script checks these requirements before fetching or changing the Git checkout.
 
 The `deploy` account needs Docker access; Docker group membership effectively grants administrative access to this host. Keep its SSH keys private.
 
-Point an **A record** such as `api.example.com` to the server's public IPv4 address. Only add an AAAA record if the server also has working public IPv6. Allow inbound TCP **80 and 443**, plus your existing SSH port, in your server/provider firewall. For a home server, forward 80 and 443 from the router as well. This workflow requires the SSH address to be reachable from GitHub-hosted runners.
+Point an **A record** such as `netscope.redasd.dev` to the server's public IPv4 address. Only add an AAAA record if the server also has working public IPv6. Allow inbound TCP **80 and 443**, plus your existing SSH port, in your server/provider firewall. For a home server, forward 80 and 443 from the router as well. This workflow requires the SSH address to be reachable from GitHub-hosted runners.
 
 Nginx owns host ports 80/443 and proxies requests to `127.0.0.1:5220`. Certbot's Nginx plugin obtains the certificate after DNS points to this server; HTTP validation requires public port 80. See [Certbot's Nginx instructions](https://certbot.eff.org/instructions?os=snap&ws=nginx). The setup script below uses the Ubuntu/Debian packages and their `certbot.timer` for renewal. Existing Nginx sites can coexist under other hostnames. If another web server occupies 80/443, resolve that conflict before running the setup script.
 
@@ -90,7 +118,7 @@ From an account with sudo access (your server administrator account, not necessa
 
 ```bash
 cd /opt/netscope
-sudo bash scripts/setup-nginx.sh api.example.com you@example.com
+sudo bash scripts/setup-nginx.sh netscope.redasd.dev you@example.com
 sudo certbot renew --dry-run
 ```
 
@@ -104,7 +132,7 @@ Verify:
 
 ```bash
 curl --fail http://127.0.0.1:5220/health
-curl --fail https://api.example.com/health
+curl --fail https://netscope.redasd.dev/health
 ```
 
 The first checks the API/database. The second also checks public DNS, networking and TLS. The deployment workflow uses the internal check, so verify the public URL during initial setup.
@@ -113,7 +141,7 @@ Only host Nginx is publicly exposed. The API's diagnostic HTTP port binds to `12
 
 ## 4. Create your first administrator
 
-Register your account through `POST https://api.example.com/api/auth/register` using Postman and your own email/password. Registration always creates a User account.
+Open `https://netscope.redasd.dev/#/register` and create your account, or use `POST https://netscope.redasd.dev/api/auth/register` with Postman and your own email/password. Registration always creates a User account.
 
 On the server, promote that exact account once, replacing `you@example.com` with the lowercase registered email:
 
@@ -126,7 +154,7 @@ RETURNING "Id", "Email", "Role";
 SQL
 ```
 
-Confirm one row was updated. Log in again to obtain a new JWT containing the Admin role; the previous User token will no longer authenticate. Create real locations, devices and clients through the API. The local demo collection expects demo accounts and should be run locally or in CI, not against this production database.
+Confirm one row was updated. Log in again to receive a new HttpOnly JWT cookie containing the Admin role; the previous User cookie will no longer authenticate. The login response also sets a rotating refresh cookie. Create real locations, devices and clients through the API. The local demo collection expects demo accounts and should be run locally or in CI, not against this production database.
 
 ## 5. Enable deployment after a push
 
@@ -181,7 +209,7 @@ git push origin main
 The pipeline is:
 
 ```text
-push to main → build + PostgreSQL integration tests
+push to main → UI lint/build + .NET build + PostgreSQL/API + browser tests
              → SSH to your server
              → fetch and check out the tested commit
              → build image + back up database

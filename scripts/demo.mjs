@@ -15,13 +15,17 @@ const resolve = value => {
   return value;
 };
 const at = (object, path) => path.split('.').reduce((value, key) => value?.[key], object);
+const issuedCookies = response => response.headers.getSetCookie();
+const cookieHeader = headers => headers.map(value => value.split(';', 1)[0]).filter(value => /^netscope_(access|refresh)=/.test(value)).join('; ');
+const accessFromCookie = cookies => /(?:^|; )netscope_access=([^;]+)/.exec(cookies)?.[1];
 const started = performance.now();
 let passed = 0;
 try {
   for (const scenario of scenarios) {
     const test = resolve(scenario);
     const headers = { 'Content-Type': 'application/json' };
-    if (test.token) headers.Authorization = `Bearer ${vars[test.token]}`;
+    if (test.token) headers.Cookie = vars[test.token];
+    if (test.origin) headers.Origin = test.origin;
     const response = await fetch(baseUrl + test.path, { method: test.method, headers, body: test.raw ?? (test.body ? JSON.stringify(test.body) : undefined), signal: AbortSignal.timeout(10000) });
     const text = await response.text();
     assert.equal(response.status, test.status, `${test.name}: ${text}`);
@@ -34,13 +38,27 @@ try {
     }
     if (test.status === 201) assert.ok(response.headers.get('location'), `${test.name}: Location header`);
     for (const [key, path] of Object.entries(test.save ?? {})) { assert.ok(at(body, path), test.name); vars[key] = at(body, path); }
+    if (test.previousCookie) vars[test.previousCookie] = vars[test.saveCookie];
+    if (test.saveCookie) {
+      const setCookies = issuedCookies(response);
+      assert.equal(setCookies.length, 2, `${test.name}: access and refresh cookies`);
+      for (const cookie of setCookies) {
+        assert.match(cookie, /HttpOnly/i, `${test.name}: HttpOnly`);
+        assert.match(cookie, /SameSite=Strict/i, `${test.name}: SameSite`);
+      }
+      vars[test.saveCookie] = cookieHeader(setCookies);
+      assert.ok(accessFromCookie(vars[test.saveCookie]), `${test.name}: JWT cookie`);
+      assert.match(vars[test.saveCookie], /netscope_refresh=/, `${test.name}: refresh cookie`);
+    }
     for (const [path, expected] of Object.entries(test.equals ?? {})) assert.deepEqual(at(body, path), expected, `${test.name}: ${path}`);
     for (const path of test.absent ?? []) assert.equal(at(body, path), undefined, `${test.name}: ${path}`);
+    for (const path of test.has ?? []) assert.notEqual(at(body, path), undefined, `${test.name}: ${path}`);
     if (test.jwtRole) {
-      const claims = JSON.parse(Buffer.from(body.accessToken.split('.')[1], 'base64url'));
+      const claims = JSON.parse(Buffer.from(accessFromCookie(vars[test.saveCookie]).split('.')[1], 'base64url'));
       assert.equal(claims.role, test.jwtRole);
       assert.equal(claims.sub, body.user.id);
-      assert.ok(claims.jti && claims.exp > claims.iat || claims.jti && claims.exp > claims.nbf);
+      assert.ok(claims.jti && claims.exp > claims.nbf);
+      assert.ok(claims.exp - claims.nbf <= 1800);
     }
     passed++;
     console.log(`PASS ${String(passed).padStart(2)} | ${test.status} | ${test.name}`);
@@ -52,7 +70,7 @@ try {
   assert.equal(operations.filter(x => x.path.startsWith('/api/locations')).length, 15);
   for (const { path, method, operation } of operations) {
     assert.ok(operation.summary, `OpenAPI summary: ${method} ${path}`);
-    if (path.startsWith('/api/') && !['/api/auth/login', '/api/auth/register'].includes(path)) assert.ok(operation.security?.length, `OpenAPI security: ${path}`);
+    if (path.startsWith('/api/') && !['/api/auth/login', '/api/auth/register', '/api/auth/refresh', '/api/auth/logout'].includes(path)) assert.ok(operation.security?.length, `OpenAPI security: ${path}`);
   }
   console.log(`PASS OpenAPI: ${operations.length} operations, including all 15 CRUD methods`);
   console.log(`\n${passed}/${scenarios.length} HTTP scenarios passed in ${((performance.now() - started) / 1000).toFixed(2)} s.`);
@@ -62,6 +80,6 @@ try {
 } finally {
   // Only delete accounts created by this run; cascades clean up their test objects after failures.
   if (passed !== scenarios.length && vars.adminToken) {
-    for (const id of [vars.ownerId, vars.otherId].filter(Boolean)) await fetch(`${baseUrl}/api/users/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${vars.adminToken}` } }).catch(() => {});
+    for (const id of [vars.ownerId, vars.otherId].filter(Boolean)) await fetch(`${baseUrl}/api/users/${id}`, { method: 'DELETE', headers: { Cookie: vars.adminToken } }).catch(() => {});
   }
 }

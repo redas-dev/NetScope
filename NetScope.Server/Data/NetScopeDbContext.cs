@@ -10,6 +10,7 @@ public class NetScopeDbContext(DbContextOptions<NetScopeDbContext> options) : Db
     public DbSet<NetworkDevice> Devices => Set<NetworkDevice>();
     public DbSet<NetworkClient> Clients => Set<NetworkClient>();
     public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -20,5 +21,7 @@ public class NetScopeDbContext(DbContextOptions<NetScopeDbContext> options) : Db
         model.Entity<NetworkClient>().HasOne(x => x.Device).WithMany().HasForeignKey(x => x.DeviceId).OnDelete(DeleteBehavior.Cascade);
         model.Entity<NetworkDevice>().HasIndex(x => new { x.LocationId, x.MacAddress }).IsUnique();
         model.Entity<NetworkClient>().HasIndex(x => new { x.DeviceId, x.MacAddress }).IsUnique();
+        model.Entity<RefreshToken>().HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        model.Entity<RefreshToken>().HasIndex(x => x.TokenHash).IsUnique();
     }
 }

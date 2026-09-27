@@ -36,6 +36,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     };
     options.Events = new JwtBearerEvents
     {
+        OnMessageReceived = context =>
+        {
+            var cookie = context.Request.Cookies[TokenService.AccessCookie];
+            if (string.IsNullOrWhiteSpace(cookie)) context.NoResult();
+            else context.Token = cookie;
+            return Task.CompletedTask;
+        },
         OnTokenValidated = async context =>
         {
             var db = context.HttpContext.RequestServices.GetRequiredService<NetScopeDbContext>();
@@ -53,22 +60,31 @@ builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer((document, context, ct) =>
     {
-        document.Info = new() { Title = "NetScope API", Version = "v1", Description = "Vietos, tinklo įrenginiai ir klientai. JWT rolės: User, Admin. 15 CRUD metodų ir paskyrų valdymas." };
+        document.Info = new() { Title = "NetScope API", Version = "v1", Description = "Vietos, tinklo įrenginiai ir klientai. Svečias neprisijungęs; JWT rolės: User ir Admin. Prieiga per HttpOnly slapukus, 15 CRUD metodų ir paskyrų valdymas." };
         document.Components ??= new();
         document.Components.SecuritySchemes = new Dictionary<string, IOpenApiSecurityScheme>
         {
-            ["Bearer"] = new OpenApiSecurityScheme { Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT", Description = "JWT iš /api/auth/login arba /api/auth/register" }
+            ["AccessCookie"] = new OpenApiSecurityScheme { Type = SecuritySchemeType.ApiKey, In = ParameterLocation.Cookie,
+                Name = TokenService.AccessCookie, Description = "30 minučių JWT HttpOnly slapuke" },
+            ["RefreshCookie"] = new OpenApiSecurityScheme { Type = SecuritySchemeType.ApiKey, In = ParameterLocation.Cookie,
+                Name = TokenService.RefreshCookie, Description = "7 dienų atnaujinimo žetonas HttpOnly slapuke" }
         };
         foreach (var path in document.Paths)
             foreach (var operation in path.Value.Operations!.Values)
-                if (path.Key is not "/api/auth/login" and not "/api/auth/register" and not "/health")
-                    operation.Security = [new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference("Bearer", document)] = [] }];
+                if (path.Key is "/api/auth/refresh")
+                    operation.Security = [new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference("RefreshCookie", document)] = [] }];
+                else if (path.Key is not "/api/auth/login" and not "/api/auth/register" and not "/api/auth/logout" and not "/health")
+                    operation.Security = [new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference("AccessCookie", document)] = [] }];
         return Task.CompletedTask;
     });
 });
 
 var app = builder.Build();
 app.UseExceptionHandler();
+// The production image includes the compiled React app. Hash routes keep API
+// 404 responses intact and allow browser reloads without an API catch-all.
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.Use(async (context, next) =>
 {
     try { await next(context); }
@@ -86,6 +102,21 @@ app.Use(async (context, next) =>
     }
 });
 app.UseStatusCodePages();
+app.Use(async (context, next) =>
+{
+    if (context.Request.Method is not ("GET" or "HEAD" or "OPTIONS" or "TRACE")
+        && context.Request.Headers.TryGetValue("Origin", out var originHeader))
+    {
+        var expected = $"{context.Request.Scheme}://{context.Request.Host}";
+        if (!Uri.TryCreate(originHeader.ToString(), UriKind.Absolute, out var origin)
+            || !string.Equals(origin.GetLeftPart(UriPartial.Authority), expected, StringComparison.OrdinalIgnoreCase))
+        {
+            await Results.Problem(statusCode: 403, title: "Kitos kilmės užklausa neleidžiama.").ExecuteAsync(context);
+            return;
+        }
+    }
+    await next(context);
+});
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

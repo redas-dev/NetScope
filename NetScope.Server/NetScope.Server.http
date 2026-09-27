@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:5220
-@token = paste_accessToken_here
+@cookie = netscope_access=paste_JWT_here; netscope_refresh=paste_refresh_token_here
 
 GET {{baseUrl}}/health
 Accept: application/json
@@ -11,9 +11,17 @@ Content-Type: application/json
 
 {"email":"redas@netscope.local","password":"NetScopeDemo!2026"}
 
-### Copy accessToken from login response into @token above
+### Copy the two name=value pairs from the login Set-Cookie headers into @cookie above
 GET {{baseUrl}}/api/locations
-Authorization: Bearer {{token}}
+Cookie: {{cookie}}
+
+###
+GET {{baseUrl}}/api/overview
+Cookie: {{cookie}}
+
+###
+POST {{baseUrl}}/api/auth/refresh
+Cookie: {{cookie}}
 
 ###
 GET {{baseUrl}}/openapi/v1.json

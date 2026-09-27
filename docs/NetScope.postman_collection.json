@@ -1,8 +1,11 @@
 {
   "info": {
-    "name": "NetScope - 15 CRUD and JWT authorization",
+    "name": "NetScope - CRUD and JWT cookies",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Run the entire collection in order with zero delay. Creates temporary users and removes them at the end. Requires seeded demo administrator."
+    "description": "Run the entire collection in order with zero delay. Captures HttpOnly JWT and refresh cookies, creates temporary users and removes them at the end. Requires seeded demo administrator."
+  },
+  "protocolProfileBehavior": {
+    "disableCookieJar": true
   },
   "variable": [
     {
@@ -43,6 +46,10 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": ""
           }
         ],
         "auth": {
@@ -67,13 +74,17 @@
       ]
     },
     {
-      "name": "Protected endpoint without token",
+      "name": "Protected endpoint without cookie",
       "request": {
         "method": "GET",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": ""
           }
         ],
         "auth": {
@@ -105,6 +116,10 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": ""
           }
         ],
         "auth": {
@@ -145,6 +160,10 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": ""
           }
         ],
         "auth": {
@@ -172,9 +191,12 @@
               "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
               "const body = pm.response.json();",
               "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
-              "pm.collectionVariables.set(\"ownerToken\", at(body, \"accessToken\"));",
               "pm.collectionVariables.set(\"ownerId\", at(body, \"user.id\"));",
-              "pm.test(\"user.role\", () => pm.expect(at(body, \"user.role\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"User\\\"\"))));"
+              "const cookiePairs = pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').flatMap(h => Array.from(h.value.matchAll(/netscope_(?:access|refresh)=[^;,\\s]+/g), m => m[0]));",
+              "pm.test('HttpOnly JWT and refresh cookies', () => { pm.expect(cookiePairs.length).to.eql(2); pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').forEach(h => { pm.expect(h.value).to.match(/HttpOnly/i); pm.expect(h.value).to.match(/SameSite=Strict/i); }); });",
+              "pm.collectionVariables.set(\"ownerToken\", cookiePairs.join('; '));",
+              "pm.test(\"user.role\", () => pm.expect(at(body, \"user.role\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"User\\\"\"))));",
+              "pm.test('No secret fields', () => pm.expect(at(body, \"accessToken\")).to.be.undefined);"
             ]
           }
         }
@@ -188,6 +210,10 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": ""
           }
         ],
         "auth": {
@@ -228,6 +254,10 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": ""
           }
         ],
         "auth": {
@@ -268,6 +298,10 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": ""
           }
         ],
         "auth": {
@@ -294,8 +328,11 @@
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
               "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
               "const body = pm.response.json();",
-              "pm.collectionVariables.set(\"ownerToken\", at(body, \"accessToken\"));",
-              "pm.test('JWT role', () => pm.expect(JSON.parse(atob(body.accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role).to.eql(\"User\"));"
+              "const cookiePairs = pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').flatMap(h => Array.from(h.value.matchAll(/netscope_(?:access|refresh)=[^;,\\s]+/g), m => m[0]));",
+              "pm.test('HttpOnly JWT and refresh cookies', () => { pm.expect(cookiePairs.length).to.eql(2); pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').forEach(h => { pm.expect(h.value).to.match(/HttpOnly/i); pm.expect(h.value).to.match(/SameSite=Strict/i); }); });",
+              "pm.collectionVariables.set(\"ownerToken\", cookiePairs.join('; '));",
+              "pm.test('No secret fields', () => pm.expect(at(body, \"accessToken\")).to.be.undefined);",
+              "pm.test('JWT role', () => { const cookie = pm.collectionVariables.get(\"ownerToken\"); const jwt = /netscope_access=([^;]+)/.exec(cookie)[1]; pm.expect(JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role).to.eql(\"User\"); });"
             ]
           }
         }
@@ -309,6 +346,10 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": ""
           }
         ],
         "auth": {
@@ -336,8 +377,11 @@
               "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
               "const body = pm.response.json();",
               "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
-              "pm.collectionVariables.set(\"otherToken\", at(body, \"accessToken\"));",
-              "pm.collectionVariables.set(\"otherId\", at(body, \"user.id\"));"
+              "pm.collectionVariables.set(\"otherId\", at(body, \"user.id\"));",
+              "const cookiePairs = pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').flatMap(h => Array.from(h.value.matchAll(/netscope_(?:access|refresh)=[^;,\\s]+/g), m => m[0]));",
+              "pm.test('HttpOnly JWT and refresh cookies', () => { pm.expect(cookiePairs.length).to.eql(2); pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').forEach(h => { pm.expect(h.value).to.match(/HttpOnly/i); pm.expect(h.value).to.match(/SameSite=Strict/i); }); });",
+              "pm.collectionVariables.set(\"otherToken\", cookiePairs.join('; '));",
+              "pm.test('No secret fields', () => pm.expect(at(body, \"accessToken\")).to.be.undefined);"
             ]
           }
         }
@@ -351,6 +395,10 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": ""
           }
         ],
         "auth": {
@@ -377,9 +425,12 @@
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
               "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
               "const body = pm.response.json();",
-              "pm.collectionVariables.set(\"adminToken\", at(body, \"accessToken\"));",
               "pm.collectionVariables.set(\"adminId\", at(body, \"user.id\"));",
-              "pm.test('JWT role', () => pm.expect(JSON.parse(atob(body.accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role).to.eql(\"Admin\"));"
+              "const cookiePairs = pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').flatMap(h => Array.from(h.value.matchAll(/netscope_(?:access|refresh)=[^;,\\s]+/g), m => m[0]));",
+              "pm.test('HttpOnly JWT and refresh cookies', () => { pm.expect(cookiePairs.length).to.eql(2); pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').forEach(h => { pm.expect(h.value).to.match(/HttpOnly/i); pm.expect(h.value).to.match(/SameSite=Strict/i); }); });",
+              "pm.collectionVariables.set(\"adminToken\", cookiePairs.join('; '));",
+              "pm.test('No secret fields', () => pm.expect(at(body, \"accessToken\")).to.be.undefined);",
+              "pm.test('JWT role', () => { const cookie = pm.collectionVariables.get(\"adminToken\"); const jwt = /netscope_access=([^;]+)/.exec(cookie)[1]; pm.expect(JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role).to.eql(\"Admin\"); });"
             ]
           }
         }
@@ -393,17 +444,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/auth/me"
       },
@@ -425,6 +473,202 @@
       ]
     },
     {
+      "name": "Cross-origin cookie write is rejected",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          },
+          {
+            "key": "Origin",
+            "value": "https://example.invalid"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo laboratorija\",\n  \"address\": \"Studentų g. 50, Kaunas\",\n  \"description\": \"Automatinė API demonstracija\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Refresh owner session",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/auth/refresh"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set(\"staleOwnerToken\", pm.collectionVariables.get(\"ownerToken\"));",
+              "const cookiePairs = pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').flatMap(h => Array.from(h.value.matchAll(/netscope_(?:access|refresh)=[^;,\\s]+/g), m => m[0]));",
+              "pm.test('HttpOnly JWT and refresh cookies', () => { pm.expect(cookiePairs.length).to.eql(2); pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').forEach(h => { pm.expect(h.value).to.match(/HttpOnly/i); pm.expect(h.value).to.match(/SameSite=Strict/i); }); });",
+              "pm.collectionVariables.set(\"ownerToken\", cookiePairs.join('; '));",
+              "pm.test(\"user.id\", () => pm.expect(at(body, \"user.id\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{ownerId}}\\\"\"))));",
+              "pm.test('JWT role', () => { const cookie = pm.collectionVariables.get(\"ownerToken\"); const jwt = /netscope_access=([^;]+)/.exec(cookie)[1]; pm.expect(JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role).to.eql(\"User\"); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reused refresh token is rejected",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{staleOwnerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/auth/refresh"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Overview joins locations and devices",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/overview"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test(\"locationCount\", () => pm.expect(at(body, \"locationCount\")).not.to.be.undefined);",
+              "pm.test(\"deviceCount\", () => pm.expect(at(body, \"deviceCount\")).not.to.be.undefined);",
+              "pm.test(\"recentLocations.0.deviceCount\", () => pm.expect(at(body, \"recentLocations.0.deviceCount\")).not.to.be.undefined);",
+              "pm.test(\"links.self.href\", () => pm.expect(at(body, \"links.self.href\")).not.to.be.undefined);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pagination links preserve filters",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations?search=KTU&pageSize=1"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const body = pm.response.json();",
+              "pm.test(\"links.next.href\", () => pm.expect(at(body, \"links.next.href\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"/api/locations?search=KTU&page=2&pageSize=1\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "01 Create location",
       "request": {
         "method": "POST",
@@ -432,17 +676,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations",
         "body": {
@@ -481,17 +722,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations?search=Demo&ownerId={{ownerId}}&pageSize=1"
       },
@@ -521,17 +759,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}"
       },
@@ -545,7 +780,9 @@
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
               "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
               "const body = pm.response.json();",
-              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Demo laboratorija\\\"\"))));"
+              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Demo laboratorija\\\"\"))));",
+              "pm.test(\"links.self.href\", () => pm.expect(at(body, \"links.self.href\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"/api/locations/{{locationId}}\\\"\"))));",
+              "pm.test(\"links.devices.href\", () => pm.expect(at(body, \"links.devices.href\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"/api/locations/{{locationId}}/devices\\\"\"))));"
             ]
           }
         }
@@ -559,17 +796,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}",
         "body": {
@@ -606,17 +840,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
         "body": {
@@ -655,17 +886,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices?type=Router&status=Online&search=Demo"
       },
@@ -694,17 +922,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
       },
@@ -718,7 +943,8 @@
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
               "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
               "const body = pm.response.json();",
-              "pm.test(\"ipAddress\", () => pm.expect(at(body, \"ipAddress\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"10.10.0.1\\\"\"))));"
+              "pm.test(\"ipAddress\", () => pm.expect(at(body, \"ipAddress\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"10.10.0.1\\\"\"))));",
+              "pm.test(\"links.clients.href\", () => pm.expect(at(body, \"links.clients.href\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"/api/locations/{{locationId}}/devices/{{deviceId}}/clients\\\"\"))));"
             ]
           }
         }
@@ -732,17 +958,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}",
         "body": {
@@ -779,17 +1002,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
         "body": {
@@ -828,17 +1048,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients?type=Computer&search=Demo"
       },
@@ -867,17 +1084,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
       },
@@ -891,7 +1105,8 @@
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
               "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
               "const body = pm.response.json();",
-              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Demo kompiuteris\\\"\"))));"
+              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Demo kompiuteris\\\"\"))));",
+              "pm.test(\"links.device.href\", () => pm.expect(at(body, \"links.device.href\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"/api/locations/{{locationId}}/devices/{{deviceId}}\\\"\"))));"
             ]
           }
         }
@@ -905,17 +1120,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}",
         "body": {
@@ -952,17 +1164,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{otherToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}"
       },
@@ -989,17 +1198,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{otherToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
       },
@@ -1026,17 +1232,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{otherToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}",
         "body": {
@@ -1073,17 +1276,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{otherToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}"
       },
@@ -1111,17 +1311,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{otherToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
         "body": {
@@ -1158,17 +1355,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{otherToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}",
         "body": {
@@ -1205,17 +1399,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{otherToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
       },
@@ -1243,17 +1434,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{otherToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients"
       },
@@ -1281,17 +1469,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{otherToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
         "body": {
@@ -1328,17 +1513,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{otherToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
       },
@@ -1366,17 +1548,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{otherToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}",
         "body": {
@@ -1413,17 +1592,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{otherToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
       },
@@ -1451,17 +1627,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{adminToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{adminToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
       },
@@ -1488,17 +1661,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{adminToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{adminToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}",
         "body": {
@@ -1534,17 +1704,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{adminToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{adminToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}",
         "body": {
@@ -1580,17 +1747,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{adminToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{adminToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}",
         "body": {
@@ -1626,17 +1790,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations",
         "body": {
@@ -1673,17 +1834,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}",
         "body": {
@@ -1720,17 +1878,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations",
         "body": {
@@ -1767,17 +1922,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
         "body": {
@@ -1814,17 +1966,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
         "body": {
@@ -1861,17 +2010,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
         "body": {
@@ -1908,17 +2054,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations?page=0&pageSize=101"
       },
@@ -1946,17 +2089,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices?status=Invalid"
       },
@@ -1984,17 +2124,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
         "body": {
@@ -2031,17 +2168,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
         "body": {
@@ -2078,17 +2212,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/00000000-0000-0000-0000-000000000000"
       },
@@ -2116,17 +2247,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/00000000-0000-0000-0000-000000000000"
       },
@@ -2154,17 +2282,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/00000000-0000-0000-0000-000000000000"
       },
@@ -2192,17 +2317,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations",
         "body": {
@@ -2240,17 +2362,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{secondLocationId}}/devices/{{deviceId}}"
       },
@@ -2278,17 +2397,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{secondLocationId}}/devices/{{deviceId}}/clients/{{clientId}}"
       },
@@ -2316,17 +2432,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
       },
@@ -2352,17 +2465,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
       },
@@ -2390,17 +2500,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
       },
@@ -2426,17 +2533,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
       },
@@ -2464,17 +2568,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}"
       },
@@ -2500,17 +2601,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{locationId}}"
       },
@@ -2538,17 +2636,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/users"
       },
@@ -2576,17 +2671,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/users/{{otherId}}"
       },
@@ -2614,17 +2706,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{adminToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{adminToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/users?search={{ownerEmail}}"
       },
@@ -2654,17 +2743,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{adminToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{adminToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/users/{{adminId}}"
       },
@@ -2692,17 +2778,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/auth/logout"
       },
@@ -2728,17 +2811,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{ownerToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/auth/me"
       },
@@ -2766,17 +2846,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{adminToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{adminToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/users/{{ownerId}}"
       },
@@ -2802,17 +2879,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{adminToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{adminToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/locations/{{secondLocationId}}"
       },
@@ -2840,17 +2914,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{adminToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{adminToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/users/{{otherId}}"
       },
@@ -2876,17 +2947,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{otherToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/auth/me"
       },
@@ -2914,17 +2982,14 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{adminToken}}"
           }
         ],
         "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{adminToken}}",
-              "type": "string"
-            }
-          ]
+          "type": "noauth"
         },
         "url": "{{baseUrl}}/api/auth/logout"
       },

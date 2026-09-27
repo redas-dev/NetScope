@@ -2,12 +2,12 @@
   "openapi": "3.1.1",
   "info": {
     "title": "NetScope API",
-    "description": "Vietos, tinklo įrenginiai ir klientai. JWT rolės: User, Admin. 15 CRUD metodų ir paskyrų valdymas.",
+    "description": "Vietos, tinklo įrenginiai ir klientai. Svečias neprisijungęs; JWT rolės: User ir Admin. Prieiga per HttpOnly slapukus, 15 CRUD metodų ir paskyrų valdymas.",
     "version": "v1"
   },
   "servers": [
     {
-      "url": "http://localhost:5220/"
+      "url": "http://localhost:5221/"
     }
   ],
   "paths": {
@@ -116,7 +116,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TokenResponse"
+                  "$ref": "#/components/schemas/SessionResponse"
                 }
               }
             }
@@ -206,12 +206,87 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TokenResponse"
+                  "$ref": "#/components/schemas/SessionResponse"
                 }
               }
             }
           }
         }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Pakeisti ilgalaikį refresh žetoną ir išduoti naują JWT slapukuose",
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "RefreshCookie": [ ]
+          }
+        ]
       }
     },
     "/api/auth/me": {
@@ -284,7 +359,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       }
@@ -294,7 +369,7 @@
         "tags": [
           "Auth"
         ],
-        "summary": "Atsijungti; dabartinis JWT atšaukiamas iki jo galiojimo pabaigos",
+        "summary": "Atsijungti; atšaukti dabartinį JWT ir refresh žetoną",
         "responses": {
           "400": {
             "description": "Bad Request",
@@ -352,12 +427,7 @@
               "application/json": { }
             }
           }
-        },
-        "security": [
-          {
-            "Bearer": [ ]
-          }
-        ]
+        }
       }
     },
     "/api/locations/{locationId}/devices/{deviceId}/clients": {
@@ -495,7 +565,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       },
@@ -608,7 +678,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       }
@@ -712,7 +782,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       },
@@ -834,7 +904,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       },
@@ -932,7 +1002,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       }
@@ -1071,7 +1141,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       },
@@ -1175,7 +1245,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       }
@@ -1270,7 +1340,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       },
@@ -1383,7 +1453,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       },
@@ -1472,7 +1542,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       }
@@ -1594,7 +1664,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       },
@@ -1687,7 +1757,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       }
@@ -1773,7 +1843,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       },
@@ -1877,7 +1947,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       },
@@ -1957,7 +2027,82 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
+          }
+        ]
+      }
+    },
+    "/api/overview": {
+      "get": {
+        "tags": [
+          "Overview"
+        ],
+        "summary": "Tinklo apžvalga iš vietų ir įrenginių duomenų",
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AccessCookie": [ ]
           }
         ]
       }
@@ -2071,7 +2216,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       }
@@ -2153,7 +2298,7 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "AccessCookie": [ ]
           }
         ]
       }
@@ -2191,7 +2336,8 @@
           "name",
           "type",
           "ipAddress",
-          "macAddress"
+          "macAddress",
+          "links"
         ],
         "type": "object",
         "properties": {
@@ -2214,6 +2360,12 @@
           },
           "macAddress": {
             "type": "string"
+          },
+          "links": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ResourceLink"
+            }
           }
         }
       },
@@ -2252,7 +2404,8 @@
           "type",
           "ipAddress",
           "macAddress",
-          "status"
+          "status",
+          "links"
         ],
         "type": "object",
         "properties": {
@@ -2278,6 +2431,12 @@
           },
           "status": {
             "type": "string"
+          },
+          "links": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ResourceLink"
+            }
           }
         }
       },
@@ -2310,7 +2469,8 @@
           "address",
           "description",
           "ownerId",
-          "createdAt"
+          "createdAt",
+          "links"
         ],
         "type": "object",
         "properties": {
@@ -2337,6 +2497,12 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "links": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ResourceLink"
+            }
           }
         }
       },
@@ -2355,12 +2521,81 @@
           }
         }
       },
+      "OverviewLocation": {
+        "required": [
+          "location",
+          "deviceCount"
+        ],
+        "type": "object",
+        "properties": {
+          "location": {
+            "$ref": "#/components/schemas/LocationResponse"
+          },
+          "deviceCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "OverviewResponse": {
+        "required": [
+          "locationCount",
+          "deviceCount",
+          "onlineDeviceCount",
+          "recentLocations",
+          "links"
+        ],
+        "type": "object",
+        "properties": {
+          "locationCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "deviceCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "onlineDeviceCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "recentLocations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OverviewLocation"
+            }
+          },
+          "links": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ResourceLink"
+            }
+          }
+        }
+      },
       "PageResultOfClientResponse": {
         "required": [
           "items",
           "total",
           "page",
-          "pageSize"
+          "pageSize",
+          "links"
         ],
         "type": "object",
         "properties": {
@@ -2393,6 +2628,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "links": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ResourceLink"
+            }
           }
         }
       },
@@ -2401,7 +2642,8 @@
           "items",
           "total",
           "page",
-          "pageSize"
+          "pageSize",
+          "links"
         ],
         "type": "object",
         "properties": {
@@ -2434,6 +2676,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "links": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ResourceLink"
+            }
           }
         }
       },
@@ -2442,7 +2690,8 @@
           "items",
           "total",
           "page",
-          "pageSize"
+          "pageSize",
+          "links"
         ],
         "type": "object",
         "properties": {
@@ -2475,6 +2724,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "links": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ResourceLink"
+            }
           }
         }
       },
@@ -2483,7 +2738,8 @@
           "items",
           "total",
           "page",
-          "pageSize"
+          "pageSize",
+          "links"
         ],
         "type": "object",
         "properties": {
@@ -2516,6 +2772,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "links": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ResourceLink"
+            }
           }
         }
       },
@@ -2572,27 +2834,34 @@
           }
         }
       },
-      "TokenResponse": {
+      "ResourceLink": {
         "required": [
-          "accessToken",
-          "tokenType",
-          "expiresAt",
-          "user"
+          "href",
+          "method"
         ],
         "type": "object",
         "properties": {
-          "accessToken": {
+          "href": {
             "type": "string"
           },
-          "tokenType": {
+          "method": {
             "type": "string"
+          }
+        }
+      },
+      "SessionResponse": {
+        "required": [
+          "user",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserResponse"
           },
           "expiresAt": {
             "type": "string",
             "format": "date-time"
-          },
-          "user": {
-            "$ref": "#/components/schemas/UserResponse"
           }
         }
       },
@@ -2618,11 +2887,17 @@
       }
     },
     "securitySchemes": {
-      "Bearer": {
-        "type": "http",
-        "description": "JWT iš /api/auth/login arba /api/auth/register",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
+      "AccessCookie": {
+        "type": "apiKey",
+        "description": "30 minučių JWT HttpOnly slapuke",
+        "name": "netscope_access",
+        "in": "cookie"
+      },
+      "RefreshCookie": {
+        "type": "apiKey",
+        "description": "7 dienų atnaujinimo žetonas HttpOnly slapuke",
+        "name": "netscope_refresh",
+        "in": "cookie"
       }
     }
   },
@@ -2641,6 +2916,9 @@
     },
     {
       "name": "Locations"
+    },
+    {
+      "name": "Overview"
     },
     {
       "name": "Users"

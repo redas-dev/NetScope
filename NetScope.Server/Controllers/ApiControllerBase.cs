@@ -25,13 +25,42 @@ public abstract class ApiControllerBase(NetScopeDbContext db) : ControllerBase
     protected Task<Location?> FindLocation(Guid locationId) => db.Locations.SingleOrDefaultAsync(x => x.Id == locationId);
     protected Task<NetworkDevice?> FindDevice(Guid locationId, Guid deviceId) => db.Devices.Include(x => x.Location)
         .SingleOrDefaultAsync(x => x.Id == deviceId && x.LocationId == locationId);
-    protected static LocationResponse View(Location x) => new(x.Id, x.Name, x.Address, x.Description, x.OwnerId, x.CreatedAt);
-    protected static DeviceResponse View(NetworkDevice x) => new(x.Id, x.LocationId, x.Name, x.Type, x.IpAddress, x.MacAddress, x.Status);
-    protected static ClientResponse View(NetworkClient x) => new(x.Id, x.DeviceId, x.Name, x.Type, x.IpAddress, x.MacAddress);
-    protected static async Task<PageResult<TOut>> Page<T, TOut>(IQueryable<T> query, ListQuery filter, Func<T, TOut> map)
+    protected static LocationResponse View(Location x) => new(x.Id, x.Name, x.Address, x.Description, x.OwnerId, x.CreatedAt,
+        new Dictionary<string, ResourceLink>
+        {
+            ["self"] = new($"/api/locations/{x.Id}", "GET"),
+            ["collection"] = new("/api/locations", "GET"),
+            ["devices"] = new($"/api/locations/{x.Id}/devices", "GET")
+        });
+    protected static DeviceResponse View(NetworkDevice x) => new(x.Id, x.LocationId, x.Name, x.Type, x.IpAddress, x.MacAddress, x.Status,
+        new Dictionary<string, ResourceLink>
+        {
+            ["self"] = new($"/api/locations/{x.LocationId}/devices/{x.Id}", "GET"),
+            ["location"] = new($"/api/locations/{x.LocationId}", "GET"),
+            ["collection"] = new($"/api/locations/{x.LocationId}/devices", "GET"),
+            ["clients"] = new($"/api/locations/{x.LocationId}/devices/{x.Id}/clients", "GET")
+        });
+    protected static ClientResponse View(NetworkClient x, Guid locationId) => new(x.Id, x.DeviceId, x.Name, x.Type, x.IpAddress, x.MacAddress,
+        new Dictionary<string, ResourceLink>
+        {
+            ["self"] = new($"/api/locations/{locationId}/devices/{x.DeviceId}/clients/{x.Id}", "GET"),
+            ["device"] = new($"/api/locations/{locationId}/devices/{x.DeviceId}", "GET"),
+            ["collection"] = new($"/api/locations/{locationId}/devices/{x.DeviceId}/clients", "GET")
+        });
+    protected async Task<PageResult<TOut>> Page<T, TOut>(IQueryable<T> query, ListQuery filter, Func<T, TOut> map)
     {
         var count = await query.CountAsync();
         var items = await query.Skip((filter.Page - 1) * filter.PageSize).Take(filter.PageSize).ToListAsync();
-        return new(items.Select(map).ToList(), count, filter.Page, filter.PageSize);
+        string PageHref(int page)
+        {
+            var parts = Request.Query.Where(x => x.Key is not "page" and not "pageSize")
+                .SelectMany(x => x.Value.Select(value => $"{Uri.EscapeDataString(x.Key)}={Uri.EscapeDataString(value ?? "")}"))
+                .Append($"page={page}").Append($"pageSize={filter.PageSize}");
+            return $"{Request.Path}?{string.Join("&", parts)}";
+        }
+        var links = new Dictionary<string, ResourceLink> { ["self"] = new(PageHref(filter.Page), "GET") };
+        if (filter.Page > 1) links["previous"] = new(PageHref(filter.Page - 1), "GET");
+        if ((long)filter.Page * filter.PageSize < count) links["next"] = new(PageHref(filter.Page + 1), "GET");
+        return new(items.Select(map).ToList(), count, filter.Page, filter.PageSize, links);
     }
 }

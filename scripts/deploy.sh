@@ -7,6 +7,29 @@ if [[ ! "$commit" =~ ^[0-9a-f]{40}$ ]]; then
   echo 'Usage: bash scripts/deploy.sh <full Git commit SHA>' >&2
   exit 1
 fi
+# Check the host before fetching or changing the deployed checkout.
+if ! command -v docker >/dev/null 2>&1; then
+  echo 'Docker CLI is missing. Install Docker Engine and the Compose plugin; see docs/deployment.md.' >&2
+  exit 1
+fi
+if ! docker compose version >/dev/null 2>&1; then
+  echo 'Docker Compose plugin is missing or cannot run for this user.' >&2
+  echo 'With the official Docker apt repository configured, an administrator should run:' >&2
+  echo '  sudo apt update && sudo apt install docker-compose-plugin' >&2
+  echo 'Then verify as the deploy user: docker compose version' >&2
+  echo 'Installation instructions: https://docs.docker.com/compose/install/linux/' >&2
+  exit 1
+fi
+compose_help="$(docker compose up --help)"
+if [[ "$compose_help" != *"--wait-timeout"* ]]; then
+  echo 'Docker Compose is too old: up --wait-timeout is required. Update the Compose plugin.' >&2
+  exit 1
+fi
+if ! docker info >/dev/null; then
+  echo 'Cannot reach Docker. Check that the daemon is running and this user has Docker access.' >&2
+  echo 'After adding deploy to the docker group, log out and reconnect before retrying.' >&2
+  exit 1
+fi
 if [[ ! -f .env.production ]]; then
   echo 'Create .env.production first; see docs/deployment.md.' >&2
   exit 1
@@ -48,7 +71,8 @@ backup="backups/$(date -u +%Y%m%dT%H%M%SZ)-${commit:0:12}.dump"
 "${compose[@]}" up -d --no-build --remove-orphans api
 
 for attempt in {1..60}; do
-  if curl --fail --silent --show-error --max-time 3 http://127.0.0.1:5220/health >/dev/null; then
+  if curl --fail --silent --show-error --max-time 3 http://127.0.0.1:5220/health >/dev/null &&
+     curl --fail --silent --show-error --max-time 3 http://127.0.0.1:5220/ >/dev/null; then
     printf '%s\n' "$commit" > .local/deployed-commit
     echo "Deployment healthy: $commit (previous checkout: $previous)"
     echo "Pre-migration database backup: $backup"

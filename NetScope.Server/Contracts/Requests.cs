@@ -33,9 +33,12 @@ public class ListQuery
     [Range(1, 1000000)] public int Page { get; set; } = 1;
     [Range(1, 100)] public int PageSize { get; set; } = 20;
 }
-public record PageResult<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize);
+public record PageResult<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize, IReadOnlyDictionary<string, ResourceLink> Links);
+public record ResourceLink(string Href, string Method);
 public record UserResponse(Guid Id, string Email, string Role);
-public record TokenResponse(string AccessToken, string TokenType, DateTime ExpiresAt, UserResponse User);
-public record LocationResponse(Guid Id, string Name, string Address, string? Description, Guid OwnerId, DateTime CreatedAt);
-public record DeviceResponse(Guid Id, Guid LocationId, string Name, string Type, string IpAddress, string MacAddress, string Status);
-public record ClientResponse(Guid Id, Guid DeviceId, string Name, string Type, string IpAddress, string MacAddress);
+public record SessionResponse(UserResponse User, DateTime ExpiresAt);
+public record LocationResponse(Guid Id, string Name, string Address, string? Description, Guid OwnerId, DateTime CreatedAt, IReadOnlyDictionary<string, ResourceLink> Links);
+public record DeviceResponse(Guid Id, Guid LocationId, string Name, string Type, string IpAddress, string MacAddress, string Status, IReadOnlyDictionary<string, ResourceLink> Links);
+public record ClientResponse(Guid Id, Guid DeviceId, string Name, string Type, string IpAddress, string MacAddress, IReadOnlyDictionary<string, ResourceLink> Links);
+public record OverviewLocation(LocationResponse Location, int DeviceCount);
+public record OverviewResponse(int LocationCount, int DeviceCount, int OnlineDeviceCount, IReadOnlyList<OverviewLocation> RecentLocations, IReadOnlyDictionary<string, ResourceLink> Links);

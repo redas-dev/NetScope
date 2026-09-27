@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="lt">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>NetScope · Sąsajos wireframe'ai</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font:
+          14px/1.6 system-ui,
+          sans-serif;
+        background: #f4f4f2;
+        color: #333;
+        margin: 0;
+        padding: 40px;
+      }
+      main {
+        max-width: 1200px;
+        margin: auto;
+      }
+      h1 {
+        font-size: 32px;
+        line-height: 1.2;
+      }
+      h2 {
+        font-size: 19px;
+        margin-top: 40px;
+      }
+      h3 {
+        margin: 0 0 12px;
+      }
+      p {
+        color: #666;
+      }
+      a {
+        color: #333;
+      }
+      nav {
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+        margin: 24px 0;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      .frame {
+        border: 1px solid #777;
+        border-radius: 7px;
+        overflow: hidden;
+        background: white;
+        font-size: 11px;
+        box-shadow: 4px 4px 0 #ddd;
+      }
+      .bar {
+        padding: 13px 17px;
+        background: #dededb;
+        border-bottom: 1px solid #aaa;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .content {
+        padding: 22px;
+      }
+      .foot {
+        padding: 14px 18px;
+        background: #ecece8;
+        display: flex;
+        justify-content: space-between;
+        border-top: 1px solid #bbb;
+        color: #777;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+      .box {
+        border: 1px solid #aaa;
+        padding: 15px;
+        background: #f8f8f6;
+        min-width: 0;
+      }
+      .light {
+        color: #777;
+      }
+      .hero {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin: 18px 0;
+      }
+      .visual {
+        background: repeating-linear-gradient(
+          35deg,
+          #eee,
+          #eee 1px,
+          white 1px,
+          white 15px
+        );
+        min-height: 125px;
+        display: grid;
+        place-items: center;
+        border: 1px solid #aaa;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin: 18px 0;
+      }
+      .stats > div {
+        padding: 14px 8px;
+        border: 1px solid #aaa;
+      }
+      .stats strong {
+        display: block;
+        font-size: 23px;
+      }
+      .button {
+        display: inline-block;
+        border: 1px solid #666;
+        background: #e2e2df;
+        padding: 7px 10px;
+        white-space: nowrap;
+      }
+      .input {
+        height: 32px;
+        border: 1px solid #aaa;
+        padding: 6px 9px;
+        color: #888;
+        margin: 6px 0 13px;
+      }
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 15px 0;
+      }
+      .table td,
+      .table th {
+        padding: 13px 8px;
+        text-align: left;
+        border-bottom: 1px solid #bbb;
+        font-weight: 400;
+      }
+      .table th {
+        background: #eee;
+        font-size: 9px;
+      }
+      .split {
+        display: grid;
+        grid-template-columns: 1.3fr 1fr;
+        gap: 14px;
+      }
+      .lines div {
+        height: 11px;
+        background: #ddd;
+        margin: 12px 0;
+      }
+      .circle {
+        width: 90px;
+        height: 90px;
+        border: 12px solid #ccc;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        margin: auto;
+      }
+      .auth {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        align-items: center;
+        min-height: 350px;
+      }
+      .phone {
+        max-width: 290px;
+        margin: auto;
+      }
+      .phone .stats {
+        grid-template-columns: 1fr 1fr;
+      }
+      .phone .content {
+        padding: 15px;
+      }
+      .phone .hero {
+        grid-template-columns: 1fr;
+      }
+      .overlay {
+        background: #e2e2df;
+        padding: 36px 45px;
+      }
+      .modal {
+        background: white;
+        border: 1px solid #777;
+        padding: 22px;
+      }
+      .note {
+        font-size: 12px;
+        border-left: 3px solid #aaa;
+        padding-left: 14px;
+      }
+      .annotation {
+        font-size: 12px;
+        color: #555;
+        margin: 10px 0 25px;
+      }
+      .tag {
+        font-family: monospace;
+        font-size: 11px;
+      }
+      .fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .flow {
+        padding: 20px;
+        border: 1px dashed #aaa;
+        background: white;
+        font-family: monospace;
+      }
+      .mobile-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 25px;
+      }
+      footer {
+        margin-top: 45px;
+        font-size: 12px;
+        color: #777;
+      }
+      @media (max-width: 768px) {
+        body {
+          padding: 20px;
+        }
+        .grid,
+        .mobile-pair {
+          grid-template-columns: 1fr;
+        }
+        .stats {
+          grid-template-columns: 1fr 1fr;
+        }
+        .auth {
+          grid-template-columns: 1fr;
+        }
+        .overlay {
+          padding: 20px;
+        }
+        .split {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media print {
+        body {
+          padding: 0;
+          background: white;
+        }
+        .frame {
+          box-shadow: none;
+          break-inside: avoid;
+        }
+        .grid {
+          display: block;
+        }
+        .grid > section {
+          break-inside: avoid;
+          margin-bottom: 20px;
+        }
+        nav {
+          display: none;
+        }
+        h2 {
+          break-after: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="tag"
+        >NETSCOPE / LABORATORINIS DARBAS 3 / SĄSAJOS PROJEKTAS</span
+      >
+      <h1>Naudotojo sąsajos wireframe'ai</h1>
+      <p>
+        Struktūriniai langų maketai prieš vizualinį apipavidalinimą. Pilki
+        blokai žymi komponentus; vietų, įrenginių ir klientų pavadinimai yra
+        pavyzdžiai.
+      </p>
+      <nav>
+        <a href="#auth">01 Prisijungimas</a><a href="#dashboard">02 Apžvalga</a
+        ><a href="#resources">03 Resursai</a><a href="#modal">04 Modalai</a
+        ><a href="#mobile">05 Mobilusis</a
+        ><a href="#admin">06 Administravimas</a
+        ><a href="/#/">Atidaryti NetScope →</a>
+      </nav>
+      <div class="flow">
+        Prisijungimas / Registracija → Apžvalga → Vietos → Vietos įrenginiai →
+        Įrenginio klientai<br />Administratorius → Naudotojai → Šalinimo
+        patvirtinimas
+      </div>
+      <div class="grid">
+        <section id="auth">
+          <h2>01 · Prisijungimas ir registracija</h2>
+          <div class="frame">
+            <div class="bar">
+              <b>◇ NetScope</b><span>Sistemos paskirtis</span>
+            </div>
+            <div class="content auth">
+              <div>
+                <h3>Kiekvienas įrenginys.<br />Savo vietoje.</h3>
+                <p>Trumpas sistemos pristatymas</p>
+                <div class="visual">[Tinklo iliustracija]</div>
+              </div>
+              <div class="box">
+                <h3>Prisijungti</h3>
+                <label>El. paštas</label>
+                <div class="input">vardas@organizacija.lt</div>
+                <label>Slaptažodis</label>
+                <div class="input">••••••••••</div>
+                <p>□ Rodyti slaptažodį</p>
+                <div class="button">Prisijungti →</div>
+                <p>Neturite paskyros? Registruotis</p>
+              </div>
+            </div>
+            <div class="foot">
+              <span>NetScope / paskirtis</span
+              ><span>Pagalba / sąsajos projektas</span>
+            </div>
+          </div>
+          <p class="annotation">
+            Registruojantis papildomai rodomas slaptažodžio pakartojimas.
+            Klaidos pateikiamos prie formos. El. pašto ir slaptažodžio tipai,
+            matomumo checkbox.
+          </p>
+        </section>
+        <section id="dashboard">
+          <h2>02 · Tinklo apžvalga</h2>
+          <div class="frame">
+            <div class="bar">
+              <b>◇ NetScope</b><span>Apžvalga | Vietos | Naudotojai*</span
+              ><span>Paskyra ↪</span>
+            </div>
+            <div class="content">
+              <div class="row">
+                <h3>Tinklo apžvalga</h3>
+                <span class="button">+ Nauja vieta</span>
+              </div>
+              <div class="hero">
+                <div>
+                  <h3>Mažiau chaoso.<br />Daugiau aiškumo.</h3>
+                  <p>Nuoroda į vietų sąrašą →</p>
+                </div>
+                <div class="visual">[Ryšių schema]</div>
+              </div>
+              <div class="stats">
+                <div>Vietos<strong>00</strong></div>
+                <div>Įrenginiai<strong>00</strong></div>
+                <div>Aktyvūs<strong>00</strong></div>
+                <div>Mano vietos<strong>00</strong></div>
+              </div>
+              <div class="split">
+                <div class="box">
+                  Naujausios vietos
+                  <div class="lines">
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                  </div>
+                </div>
+                <div class="box">
+                  Įrenginių būsenos
+                  <div class="circle">00</div>
+                </div>
+              </div>
+              <table class="table">
+                <tr>
+                  <th>Įrenginys</th>
+                  <th>Vieta / IP</th>
+                  <th>Būsena</th>
+                </tr>
+                <tr>
+                  <td>Įrašo nuoroda →</td>
+                  <td>Duomenys</td>
+                  <td>Žymė</td>
+                </tr>
+              </table>
+            </div>
+            <div class="foot">
+              <span>NetScope / paskirtis</span><span>Pagalba / projektas</span>
+            </div>
+          </div>
+          <p class="annotation">
+            Rodikliai gaunami iš API. Būsenos registruojamos rankiniu būdu. *
+            Naudotojų punktas matomas tik administratoriui.
+          </p>
+        </section>
+        <section id="resources">
+          <h2>03a · Vietų sąrašas</h2>
+          <div class="frame">
+            <div class="bar">
+              <b>◇ NetScope</b><span>Apžvalga | Vietos | Paskyra</span>
+            </div>
+            <div class="content">
+              <div class="row">
+                <h3>Tinklo vietos</h3>
+                <span class="button">+ Nauja vieta</span>
+              </div>
+              <div class="row">
+                <div class="input">⌕ Paieška pagal pavadinimą / adresą</div>
+                <span>□ Tik mano</span>
+              </div>
+              <table class="table">
+                <tr>
+                  <th>Vieta / aprašas</th>
+                  <th>Adresas</th>
+                  <th>Prieiga</th>
+                  <th>Veiksmai</th>
+                </tr>
+                <tr>
+                  <td>Laboratorija →</td>
+                  <td>Kaunas</td>
+                  <td>Mano</td>
+                  <td>✎ ⌫ →</td>
+                </tr>
+                <tr>
+                  <td>Biblioteka →</td>
+                  <td>Kaunas</td>
+                  <td>Peržiūra</td>
+                  <td>→</td>
+                </tr>
+              </table>
+              <div class="row">
+                <span>1–10 iš N</span><span>‹ 1 / N ›</span>
+              </div>
+            </div>
+            <div class="foot">
+              <span>NetScope</span><span>Pagalba / projektas</span>
+            </div>
+          </div>
+          <p class="annotation">
+            Savininkui ir administratoriui rodomas redagavimas bei šalinimas.
+            Paieška ir puslapiavimas vykdomi API.
+          </p>
+        </section>
+        <section id="resource-details">
+          <h2>03b · Vieta ir įrenginio detalės</h2>
+          <div class="frame">
+            <div class="bar">
+              <b>◇ NetScope</b><span>Apžvalga | Vietos | Paskyra</span>
+            </div>
+            <div class="content">
+              <p>Vietos › Laboratorija › Įrenginys</p>
+              <div class="row">
+                <h3>Pasirinkto objekto pavadinimas</h3>
+                <span>✎ Redaguoti / ⌫</span>
+              </div>
+              <div class="box">
+                Vieta: aprašas, sukūrimo data, prieiga<br />Įrenginys: IP, MAC,
+                būsena, priklausanti vieta
+              </div>
+              <div class="row" style="margin-top: 20px">
+                <h3>Įrenginiai / Klientai</h3>
+                <span class="button">+ Naujas įrašas</span>
+              </div>
+              <div class="row">
+                <span class="input">⌕ Paieška</span
+                ><span class="input">Tipas ▾</span
+                ><span class="input">Būsena ▾</span>
+              </div>
+              <table class="table">
+                <tr>
+                  <th>Pavadinimas / tipas</th>
+                  <th>IP / MAC</th>
+                  <th>Veiksmai</th>
+                </tr>
+                <tr>
+                  <td>Pasirinkti →</td>
+                  <td>Adresas</td>
+                  <td>✎ ⌫</td>
+                </tr>
+                <tr>
+                  <td>Pasirinkti →</td>
+                  <td>Adresas</td>
+                  <td>✎ ⌫</td>
+                </tr>
+              </table>
+            </div>
+            <div class="foot">
+              <span>NetScope</span><span>Pagalba / projektas</span>
+            </div>
+          </div>
+          <p class="annotation">
+            Įrenginio puslapyje klientai matomi tik vietos savininkui arba
+            administratoriui. Kiti mato informacinį prieigos pranešimą.
+          </p>
+        </section>
+        <section id="modal">
+          <h2>04 · Kūrimo ir šalinimo modalai</h2>
+          <div class="frame">
+            <div class="bar">Puslapis su aktyviu modaliniu langu</div>
+            <div class="overlay">
+              <div class="modal">
+                <div class="row">
+                  <h3>Naujas įrenginys</h3>
+                  <span>×</span>
+                </div>
+                <p>Paaiškinimas / validacijos pranešimas</p>
+                <label>Pavadinimas *</label>
+                <div class="input">Teksto laukas</div>
+                <div class="fields">
+                  <div>
+                    Tipas *
+                    <div class="input">Maršrutizatorius ▾</div>
+                  </div>
+                  <div>
+                    Būsena *
+                    <div class="input">Aktyvus ▾</div>
+                  </div>
+                </div>
+                <label>IP adresas *</label>
+                <div class="input">192.168.1.1</div>
+                <label>MAC adresas *</label>
+                <div class="input">AA:BB:CC:DD:EE:FF</div>
+                <div class="row">
+                  <span>Atšaukti</span><span class="button">✓ Išsaugoti</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="annotation">
+            Vietos formoje papildomai naudojamas textarea. Šalinimo lange
+            rodomas įrašo pavadinimas, kaskadinio šalinimo pasekmės ir „Atšaukti
+            / Pašalinti“. Dialogas apriboja klaviatūros fokusą.
+          </p>
+        </section>
+        <section id="admin">
+          <h2>05 · Administratoriaus naudotojų sąrašas</h2>
+          <div class="frame">
+            <div class="bar">
+              <b>◇ NetScope</b><span>Apžvalga | Vietos | Naudotojai</span>
+            </div>
+            <div class="content">
+              <h3>Naudotojai</h3>
+              <p class="note">Informacija apie šalinimo pasekmes</p>
+              <div class="input">⌕ Ieškoti pagal el. paštą</div>
+              <table class="table">
+                <tr>
+                  <th>El. paštas</th>
+                  <th>Rolė</th>
+                  <th>Veiksmas</th>
+                </tr>
+                <tr>
+                  <td>
+                    admin@organizacija.lt<br /><small>Jūsų paskyra</small>
+                  </td>
+                  <td>Admin</td>
+                  <td class="light">Pašalinti (išjungta)</td>
+                </tr>
+                <tr>
+                  <td>vardas@organizacija.lt</td>
+                  <td>User</td>
+                  <td>⌫ Pašalinti</td>
+                </tr>
+              </table>
+              <div class="row">
+                <span>1–10 iš N</span><span>‹ 1 / N ›</span>
+              </div>
+            </div>
+            <div class="foot">
+              <span>NetScope</span><span>Pagalba / projektas</span>
+            </div>
+          </div>
+          <p class="annotation">
+            Savo paskyros administratorius pašalinti negali. API papildomai
+            patikrina administratoriaus rolę.
+          </p>
+        </section>
+      </div>
+      <section id="mobile">
+        <h2>06 · Mobilusis išdėstymas ≤ 768 px</h2>
+        <div class="mobile-pair">
+          <div>
+            <div class="frame phone">
+              <div class="bar"><b>◇ NetScope</b><span>☰</span></div>
+              <div class="content">
+                <h3>Tinklo apžvalga</h3>
+                <p>Trumpas paaiškinimas</p>
+                <div class="row">
+                  <span class="button">Atnaujinti</span
+                  ><span class="button">+ Vieta</span>
+                </div>
+                <div class="box">
+                  <h3>Mažiau chaoso.</h3>
+                  <p>Peržiūrėti vietas →</p>
+                </div>
+                <div class="stats">
+                  <div>Vietos<strong>00</strong></div>
+                  <div>Įrenginiai<strong>00</strong></div>
+                  <div>Aktyvūs<strong>00</strong></div>
+                  <div>Mano<strong>00</strong></div>
+                </div>
+                <div class="box">
+                  Naujausios vietos
+                  <div class="lines">
+                    <div></div>
+                    <div></div>
+                  </div>
+                </div>
+                <div class="box" style="margin-top: 12px">
+                  Būsenų pasiskirstymas
+                  <div class="circle">00</div>
+                </div>
+                <p>Lentelė slenkama horizontaliai ↔</p>
+              </div>
+              <div class="foot">NetScope<br />Pagalba / Projektas</div>
+            </div>
+          </div>
+          <div>
+            <div class="frame phone">
+              <div class="bar"><b>◇ NetScope</b><span>×</span></div>
+              <div class="box">
+                ▦ Apžvalga<br /><br />⌖ Vietos<br /><br />♙ Naudotojai
+                (Admin)<br /><br />↪ Atsijungti
+              </div>
+              <div class="content">
+                <h3>Mobilusis meniu</h3>
+                <p>
+                  Meniu atidaromas hamburger mygtuku. Pasirinkus punktą
+                  užsidaro. Mygtukas turi aria-expanded būseną.
+                </p>
+                <div class="box">
+                  Forma vienu stulpeliu
+                  <div class="input">Pavadinimas</div>
+                  <div class="input">Tipas ▾</div>
+                  <div class="input">Būsena ▾</div>
+                  <span class="button">Išsaugoti</span>
+                </div>
+              </div>
+              <div class="foot">NetScope / Pagalba</div>
+            </div>
+          </div>
+        </div>
+        <p class="annotation">
+          Desktop: horizontalus meniu, keturi statistikos stulpeliai ir dviejų
+          stulpelių apžvalga. Mobile: hamburger, du statistikos stulpeliai,
+          vienas turinio stulpelis. Vaizdai: max-width: 100%; height: auto.
+        </p>
+      </section>
+      <footer>
+        NetScope · Sąsajos projektas · 2026. Papildomi langai: pagalbos modalas,
+        kliento informacijos modalas; būsenos: kraunama, klaida, tuščias
+        sąrašas, pasibaigusi sesija.
+      </footer>
+    </main>
+  </body>
+</html>
