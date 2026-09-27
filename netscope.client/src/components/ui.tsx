@@ -6,7 +6,7 @@ import { statuses } from "../api";
 
 export function Brand() {
   return (
-    <a className="brand" href="#/" aria-label="NetScope pradžia">
+    <a className="brand" href="/" aria-label="NetScope pradžia">
       <span className="brand-mark">
         <Icon name="network" size={24} />
       </span>

@@ -117,7 +117,7 @@ export function Dashboard({ onCreate }: { onCreate: () => void }) {
             <br />
             Kurkite, susiekite ir valdykite savo infrastruktūrą.
           </p>
-          <a href="#/locations" className="banner-link">
+          <a href="/locations" className="banner-link">
             Peržiūrėti vietas
             <Icon name="arrow" size={18} />
           </a>
@@ -150,7 +150,7 @@ export function Dashboard({ onCreate }: { onCreate: () => void }) {
                 <h2>Naujausios vietos</h2>
                 <p>Jūsų tinklo infrastruktūros pradžia</p>
               </div>
-              <a className="text-link" href="#/locations">
+              <a className="text-link" href="/locations">
                 Visos vietos
                 <Icon name="arrow" size={16} />
               </a>
@@ -162,7 +162,7 @@ export function Dashboard({ onCreate }: { onCreate: () => void }) {
                   .map(({ location, deviceCount }) => (
                     <a
                       className="location-preview"
-                      href={`#/locations/${location.id}`}
+                      href={`/locations/${location.id}`}
                       key={location.id}
                     >
                       <span className="resource-icon">
@@ -191,10 +191,6 @@ export function Dashboard({ onCreate }: { onCreate: () => void }) {
                 }
               />
             )}
-            <div className="panel-note">
-              <Icon name="info" size={16} />
-              Įrenginiai priskiriami vietoms, o klientai – įrenginiams.
-            </div>
           </section>
           <section className="panel status-panel">
             <div className="panel-heading">
@@ -244,10 +240,6 @@ export function Dashboard({ onCreate }: { onCreate: () => void }) {
                 </li>
               </ul>
             </div>
-            <p className="fine-print">
-              Būsenos įvedamos rankiniu būdu. Tai nėra automatinio tinklo
-              skenavimo duomenys.
-            </p>
           </section>
           <section className="panel device-preview-panel">
             <div className="panel-heading">
@@ -277,7 +269,7 @@ export function Dashboard({ onCreate }: { onCreate: () => void }) {
                         <td>
                           <a
                             className="table-name"
-                            href={`#/locations/${device.locationId}/devices/${device.id}`}
+                            href={`/locations/${device.locationId}/devices/${device.id}`}
                           >
                             <Icon name="server" />
                             <span>
@@ -300,7 +292,7 @@ export function Dashboard({ onCreate }: { onCreate: () => void }) {
                         <td>
                           <a
                             className="icon-button"
-                            href={`#/locations/${device.locationId}/devices/${device.id}`}
+                            href={`/locations/${device.locationId}/devices/${device.id}`}
                             aria-label={`Atidaryti ${device.name}`}
                           >
                             <Icon name="arrow" size={18} />

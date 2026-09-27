@@ -111,7 +111,7 @@ export function LocationsPage() {
                           <tr key={location.id}>
                             <td>
                               <a
-                                href={`#/locations/${location.id}`}
+                                href={`/locations/${location.id}`}
                                 className="table-name"
                               >
                                 <span className="resource-icon">
@@ -177,7 +177,7 @@ export function LocationsPage() {
                                   </>
                                 )}
                                 <a
-                                  href={`#/locations/${location.id}`}
+                                  href={`/locations/${location.id}`}
                                   className="icon-button"
                                   aria-label={`Atidaryti ${location.name}`}
                                 >
@@ -221,15 +221,6 @@ export function LocationsPage() {
           )
         )}
       </section>
-      <div className="context-note">
-        <Icon name="shield" size={18} />
-        <p>
-          Matote visas tinklo vietas. Redaguoti ir šalinti galite savo vietas
-          {session!.user.role === "Admin"
-            ? " bei kitų naudotojų vietas, nes esate administratorius."
-            : "."}
-        </p>
-      </div>
       {edit && (
         <EntityForm
           target={edit}

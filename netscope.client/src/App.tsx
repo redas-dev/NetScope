@@ -63,7 +63,7 @@ function Shell() {
         title="Puslapis nepasiekiamas"
         text="Toks puslapis neegzistuoja arba neturite teisės jo peržiūrėti."
         action={
-          <a className="button primary" href="#/">
+          <a className="button primary" href="/">
             Grįžti į apžvalgą
           </a>
         }
@@ -106,7 +106,7 @@ function Shell() {
                 aria-label="Pagrindinis meniu"
               >
                 <a
-                  href="#/"
+                  href="/"
                   aria-current={active === "dashboard" ? "page" : undefined}
                   onClick={() => setMenu(false)}
                 >
@@ -114,7 +114,7 @@ function Shell() {
                   Apžvalga
                 </a>
                 <a
-                  href="#/locations"
+                  href="/locations"
                   aria-current={active === "locations" ? "page" : undefined}
                   onClick={() => setMenu(false)}
                 >
@@ -123,7 +123,7 @@ function Shell() {
                 </a>
                 {session.user.role === "Admin" && (
                   <a
-                    href="#/users"
+                    href="/users"
                     aria-current={active === "users" ? "page" : undefined}
                     onClick={() => setMenu(false)}
                   >

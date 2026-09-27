@@ -141,7 +141,7 @@ Only host Nginx is publicly exposed. The API's diagnostic HTTP port binds to `12
 
 ## 4. Create your first administrator
 
-Open `https://netscope.redasd.dev/#/register` and create your account, or use `POST https://netscope.redasd.dev/api/auth/register` with Postman and your own email/password. Registration always creates a User account.
+Open `https://netscope.redasd.dev/register` and create your account, or use `POST https://netscope.redasd.dev/api/auth/register` with Postman and your own email/password. Registration always creates a User account.
 
 On the server, promote that exact account once, replacing `you@example.com` with the lowercase registered email:
 

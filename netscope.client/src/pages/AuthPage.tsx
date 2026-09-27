@@ -134,7 +134,7 @@ export function AuthPage({ register = false }: { register?: boolean }) {
         </form>
         <div className="auth-switch">
           {register ? "Jau turite paskyrą?" : "Dar neturite paskyros?"}{" "}
-          <a href={register ? "#/login" : "#/register"}>
+          <a href={register ? "/login" : "/register"}>
             {register ? "Prisijungti" : "Registruotis"}
           </a>
         </div>

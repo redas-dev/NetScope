@@ -101,11 +101,11 @@ export function DetailPage({
   return (
     <>
       <nav className="breadcrumbs" aria-label="Kelias">
-        <a href="#/locations">Vietos</a>
+        <a href="/locations">Vietos</a>
         <Icon name="chevron" size={14} />
         {device ? (
           <>
-            <a href={`#/locations/${locationId}`}>{location.name}</a>
+            <a href={`/locations/${locationId}`}>{location.name}</a>
             <Icon name="chevron" size={14} />
             <span>{device.name}</span>
           </>
@@ -179,7 +179,7 @@ export function DetailPage({
             </div>
             <div>
               <span>Priklauso vietai</span>
-              <a href={`#/locations/${locationId}`}>
+              <a href={`/locations/${locationId}`}>
                 {location.name}
                 <Icon name="arrow" size={15} />
               </a>
@@ -326,7 +326,7 @@ export function DetailPage({
                           ) : (
                             <a
                               className="table-name"
-                              href={`#/locations/${locationId}/devices/${row.id}`}
+                              href={`/locations/${locationId}/devices/${row.id}`}
                             >
                               <Icon name="server" />
                               <span>
@@ -394,7 +394,7 @@ export function DetailPage({
                             {!device && (
                               <a
                                 className="icon-button"
-                                href={`#/locations/${locationId}/devices/${row.id}`}
+                                href={`/locations/${locationId}/devices/${row.id}`}
                                 aria-label={`Atidaryti ${row.name}`}
                               >
                                 <Icon name="arrow" size={18} />
