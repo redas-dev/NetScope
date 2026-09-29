@@ -199,7 +199,6 @@ function Shell() {
         <div className="footer-inner">
           <div>
             <Brand />
-            <p>Aiškus tinklas. Paprastas valdymas.</p>
           </div>
           <div className="footer-links">
             <button onClick={() => setHelp(true)}>Kaip naudotis</button>

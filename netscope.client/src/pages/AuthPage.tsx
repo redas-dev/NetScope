@@ -38,16 +38,9 @@ export function AuthPage({ register = false }: { register?: boolean }) {
   return (
     <div className="auth-layout">
       <section className="auth-story">
-        <span className="eyebrow">TVARKA JŪSŲ TINKLE</span>
-        <h1>
-          Kiekvienas įrenginys.
-          <br />
-          Savo vietoje.
-        </h1>
-        <p>
-          Aiškus tinklo vaizdas prasideda nuo paprastų dalykų. Vietos,
-          įrenginiai ir klientai – vienoje sistemoje.
-        </p>
+        <span className="eyebrow">NETSCOPE</span>
+        <h1>Tinklo infrastruktūros valdymas</h1>
+        <p>Valdykite vietas, įrenginius ir jų klientus.</p>
         <img
           src="/network-map.svg"
           width="440"
@@ -69,11 +62,11 @@ export function AuthPage({ register = false }: { register?: boolean }) {
         <span className="auth-icon">
           <Icon name={register ? "users" : "lock"} size={24} />
         </span>
-        <h2>{register ? "Sukurkite paskyrą" : "Sveiki sugrįžę"}</h2>
+        <h2>{register ? "Registracija" : "Prisijungimas"}</h2>
         <p>
           {register
-            ? "Pradėkite kurti savo tinklo struktūrą."
-            : "Prisijunkite prie savo tinklo darbo erdvės."}
+            ? "Užpildykite registracijos formą."
+            : "Įveskite savo paskyros duomenis."}
         </p>
         <form onSubmit={submit}>
           <ErrorBox error={error} />
@@ -140,7 +133,7 @@ export function AuthPage({ register = false }: { register?: boolean }) {
         </div>
         <div className="auth-security">
           <Icon name="shield" size={15} />
-          Jūsų duomenys prieinami pagal suteiktas teises.
+          Duomenys prieinami pagal naudotojo teises.
         </div>
       </section>
     </div>

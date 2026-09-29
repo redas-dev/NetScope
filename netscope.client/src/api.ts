@@ -103,7 +103,7 @@ export async function request<T>(
     )
       return request<T>(path, options, false);
     const problem = await response.json().catch(() => ({}));
-    if (response.status === 401 && path !== "/api/auth/me")
+    if (response.status === 401 && !path.startsWith("/api/auth/"))
       window.dispatchEvent(new Event("netscope:expired"));
     const messages: Record<number, string> = {
       400: "Patikrinkite formos laukus. Pateikti duomenys netinkami.",

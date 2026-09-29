@@ -679,11 +679,6 @@ tbody tr:hover {
 .site-footer .brand-dot {
   color: #6ba88c;
 }
-.site-footer p {
-  font-size: 11px;
-  color: #64777e;
-  margin-top: 3px;
-}
 .footer-links {
   display: flex;
   align-items: center;

@@ -73,7 +73,7 @@ export function Dashboard({ onCreate }: { onCreate: () => void }) {
       value: data?.locations.filter(
         (location) => location.ownerId === session!.user.id,
       ).length,
-      description: "Jūsų sukurta infrastruktūra",
+      description: "Jūsų sukurtos vietos",
       icon: "shield",
     },
   ];
@@ -82,7 +82,7 @@ export function Dashboard({ onCreate }: { onCreate: () => void }) {
       <PageTitle
         eyebrow="DARBO ERDVĖ"
         title="Tinklo apžvalga"
-        description="Visas jūsų infrastruktūros vaizdas vienoje vietoje."
+        description="Vietų ir įrenginių suvestinė."
         action={
           <>
             <button
@@ -105,18 +105,10 @@ export function Dashboard({ onCreate }: { onCreate: () => void }) {
         <div>
           <span className="section-kicker">
             <span className="green-dot" />
-            JŪSŲ TINKLO STRUKTŪRA
+            TINKLO STRUKTŪRA
           </span>
-          <h2>
-            Mažiau chaoso.
-            <br />
-            Daugiau aiškumo.
-          </h2>
-          <p>
-            Nuo pastato iki prijungto kompiuterio.
-            <br />
-            Kurkite, susiekite ir valdykite savo infrastruktūrą.
-          </p>
+          <h2>Vietos ir įrenginiai</h2>
+          <p>Peržiūrėkite registruotas vietas ir jų įrenginius.</p>
           <a href="/locations" className="banner-link">
             Peržiūrėti vietas
             <Icon name="arrow" size={18} />
@@ -148,7 +140,7 @@ export function Dashboard({ onCreate }: { onCreate: () => void }) {
             <div className="panel-heading">
               <div>
                 <h2>Naujausios vietos</h2>
-                <p>Jūsų tinklo infrastruktūros pradžia</p>
+                <p>Neseniai pridėtos vietos</p>
               </div>
               <a className="text-link" href="/locations">
                 Visos vietos

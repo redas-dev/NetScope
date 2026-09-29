@@ -60,6 +60,27 @@ test.afterEach(async ({ request }) => {
   await request.post("/api/auth/logout");
 });
 
+test("invalid login shows only the credentials error", async ({ page }) => {
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({ status: 401, contentType: "application/json", body: "{}" }),
+  );
+  await page.route("**/api/auth/refresh", (route) =>
+    route.fulfill({ status: 401, contentType: "application/json", body: "{}" }),
+  );
+  await page.route("**/api/auth/login", (route) =>
+    route.fulfill({ status: 401, contentType: "application/json", body: "{}" }),
+  );
+  await page.goto("/login");
+  await page.getByLabel("El. paštas", { exact: true }).fill("wrong@example.test");
+  await page.getByLabel("Slaptažodis", { exact: true }).fill("wrong-password");
+  await page.getByRole("button", { name: "Prisijungti", exact: true }).click();
+
+  await expect(
+    page.getByRole("alert").getByText("Neteisingas el. paštas arba slaptažodis."),
+  ).toBeVisible();
+  await expect(page.getByText("Sesija baigėsi. Prisijunkite iš naujo.")).toHaveCount(0);
+});
+
 test("registration validation, session reload and logout", async ({ page }) => {
   await page.goto("/register");
   const email = `ui-${crypto.randomUUID()}@example.test`;
@@ -96,7 +117,7 @@ test("registration validation, session reload and logout", async ({ page }) => {
   if (await toggle.isVisible()) await toggle.click();
   await page.getByRole("button", { name: "Atsijungti", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Sveiki sugrįžę" }),
+    page.getByRole("heading", { name: "Prisijungimas" }),
   ).toBeVisible();
   expect((await page.context().cookies()).filter((cookie) => cookie.name.startsWith("netscope_"))).toHaveLength(0);
   expect(
