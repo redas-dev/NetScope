@@ -18,7 +18,7 @@ async function register(request: APIRequestContext) {
 }
 
 async function login(page: Page, email: string) {
-  await page.goto("/#/login");
+  await page.goto("/login");
   await page.getByLabel("El. paštas", { exact: true }).fill(email);
   await page.getByLabel("Slaptažodis", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Prisijungti", exact: true }).click();
@@ -61,7 +61,7 @@ test.afterEach(async ({ request }) => {
 });
 
 test("registration validation, session reload and logout", async ({ page }) => {
-  await page.goto("/#/register");
+  await page.goto("/register");
   const email = `ui-${crypto.randomUUID()}@example.test`;
   await page.getByLabel("El. paštas", { exact: true }).fill(email);
   await page.getByLabel("Slaptažodis", { exact: true }).fill(password);
@@ -220,23 +220,23 @@ test("read-only permissions, private clients and 404", async ({
   );
   const device = await deviceResponse.json();
   await login(page, reader.user.email);
-  await page.goto(`/#/locations/${place.id}`);
+  await page.goto(`/locations/${place.id}`);
   await expect(page.getByText("Tik peržiūra", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Naujas įrenginys" }),
   ).toHaveCount(0);
-  await page.goto(`/#/locations/${place.id}/devices/${device.id}`);
+  await page.goto(`/locations/${place.id}/devices/${device.id}`);
   await expect(
     page.getByRole("heading", { name: "Klientų informacija privati" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Naujas klientas" }),
   ).toHaveCount(0);
-  await page.goto("/#/users");
+  await page.goto("/users");
   await expect(
     page.getByRole("heading", { name: "Puslapis nepasiekiamas" }),
   ).toBeVisible();
-  await page.goto(`/#/locations/${crypto.randomUUID()}`);
+  await page.goto(`/locations/${crypto.randomUUID()}`);
   await expect(page.getByRole("alert")).toContainText("Įrašas nerastas");
 });
 
@@ -294,5 +294,8 @@ test("administrator users, modal focus and responsive layouts", async ({
   const wireframes = await request.get("/wireframes.html");
   expect(wireframes.status()).toBe(200);
   expect(await wireframes.text()).toContain("wireframe");
+  const loginPage = await request.get("/login");
+  expect(loginPage.status()).toBe(200);
+  expect(await loginPage.text()).toContain("<div id=\"root\"></div>");
   expect((await request.get("/api/not-a-route")).status()).toBe(404);
 });

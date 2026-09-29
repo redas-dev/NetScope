@@ -81,8 +81,7 @@ builder.Services.AddOpenApi(options =>
 
 var app = builder.Build();
 app.UseExceptionHandler();
-// The production image includes the compiled React app. Hash routes keep API
-// 404 responses intact and allow browser reloads without an API catch-all.
+// The production image includes the compiled React app.
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.Use(async (context, next) =>
@@ -124,6 +123,29 @@ app.MapOpenApi();
 app.MapGet("/health", async (NetScopeDbContext db) => await db.Database.CanConnectAsync()
     ? Results.Ok(new { status = "healthy" }) : Results.Problem(statusCode: 503, title: "Database unavailable"))
     .WithSummary("API ir duomenų bazės pasiekiamumas").Produces(200).Produces<ProblemDetails>(503);
+app.MapFallback(async context =>
+{
+    // Frontend routes need index.html on direct visits and refreshes. Keep API
+    // and infrastructure paths as real 404s when no endpoint matches.
+    if (context.Request.Path.StartsWithSegments("/api")
+        || context.Request.Path.StartsWithSegments("/openapi")
+        || context.Request.Path.StartsWithSegments("/health")
+        || !(HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method)))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    var index = app.Environment.WebRootFileProvider.GetFileInfo("index.html");
+    if (!index.Exists)
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    context.Response.ContentType = "text/html; charset=utf-8";
+    await context.Response.SendFileAsync(index);
+});
 
 if (app.Configuration.GetValue<bool>("Database:AutoMigrate"))
 {

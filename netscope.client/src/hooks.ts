@@ -1,14 +1,26 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
+// Keep links from the old hash-based UI working after switching to clean URLs.
+const legacyRoute = window.location.hash.slice(1);
+if (legacyRoute.startsWith("/")) {
+  window.history.replaceState(null, "", legacyRoute);
+}
+
 export const navigate = (path: string) => {
-  window.location.hash = path;
+  if (window.location.pathname === path) return;
+  window.history.pushState(null, "", path);
+  window.dispatchEvent(new Event("app:navigate"));
 };
 const subscribe = (callback: () => void) => {
-  window.addEventListener("hashchange", callback);
-  return () => window.removeEventListener("hashchange", callback);
+  window.addEventListener("popstate", callback);
+  window.addEventListener("app:navigate", callback);
+  return () => {
+    window.removeEventListener("popstate", callback);
+    window.removeEventListener("app:navigate", callback);
+  };
 };
 export const useRoute = () =>
-  useSyncExternalStore(subscribe, () => window.location.hash.slice(1) || "/");
+  useSyncExternalStore(subscribe, () => window.location.pathname);
 
 export function useLoad<T>(loader: (signal: AbortSignal) => Promise<T>) {
   const [state, setState] = useState<{

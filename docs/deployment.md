@@ -6,7 +6,7 @@ The production files include the UI build. This UI revision has not been deploye
 
 ## UI on an existing Nginx deployment
 
-The Docker image builds React and serves `wwwroot` from ASP.NET Core. Nginx continues proxying to `127.0.0.1:5220`; no additional Node service, public port, CORS configuration or Nginx restart is needed for UI updates. The public UI is `https://netscope.redasd.dev`, the API stays at `/api/...`, and wireframes are at `/wireframes.html`. Navigation uses hash routes so API 404 responses are preserved.
+The Docker image builds React and serves `wwwroot` from ASP.NET Core. Nginx continues proxying to `127.0.0.1:5220`; no additional Node service, public port, CORS configuration or Nginx restart is needed for UI updates. The public UI is `https://netscope.redasd.dev`, the API stays at `/api/...`, and wireframes are at `/wireframes.html`. Direct visits to frontend paths such as `/login` serve the React app; unknown `/api/...` paths still return 404.
 
 After committing and pushing the UI changes, the configured GitHub pipeline tests and deploys the exact commit. Alternatively, on the server:
 
