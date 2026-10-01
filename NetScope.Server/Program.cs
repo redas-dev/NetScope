@@ -152,7 +152,7 @@ if (app.Configuration.GetValue<bool>("Database:AutoMigrate"))
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<NetScopeDbContext>();
     await db.Database.MigrateAsync();
-    if (app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("Seed:DemoData")) await DemoSeeder.SeedAsync(db);
+    if (app.Configuration.GetValue<bool>("Seed:DemoData")) await DemoSeeder.SeedAsync(db);
 }
 app.Run();
 
