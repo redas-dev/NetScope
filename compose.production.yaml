@@ -36,7 +36,7 @@ services:
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=netscope;Username=netscope;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
       Jwt__Key: ${JWT_KEY:?Set JWT_KEY in .env.production}
       Database__AutoMigrate: "true"
-      Seed__DemoData: "false"
+      Seed__DemoData: "true"
     ports:
       - "127.0.0.1:5220:8080"
     depends_on:
