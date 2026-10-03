@@ -87,9 +87,16 @@ app.UseStaticFiles();
 app.Use(async (context, next) =>
 {
     try { await next(context); }
-    catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } postgres)
     {
-        await Results.Problem(statusCode: 409, title: "Įrašas su tokiu el. paštu arba MAC adresu jau egzistuoja.").ExecuteAsync(context);
+        var title = postgres.ConstraintName switch
+        {
+            "IX_Clients_DeviceId_MacAddress" => "Klientas su tokiu MAC adresu prie šio įrenginio jau egzistuoja.",
+            "IX_Devices_LocationId_MacAddress" => "Įrenginys su tokiu MAC adresu šioje vietoje jau egzistuoja.",
+            "IX_Users_Email" => "El. paštas jau naudojamas.",
+            _ => "Įrašas su tokiais unikaliais duomenimis jau egzistuoja."
+        };
+        await Results.Problem(statusCode: 409, title: title).ExecuteAsync(context);
     }
     catch (DbUpdateConcurrencyException)
     {

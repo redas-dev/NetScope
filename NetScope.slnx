@@ -1,3 +1,7 @@
 <Solution>
+  <Project Path="netscope.client/netscope.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
   <Project Path="NetScope.Server/NetScope.Server.csproj" />
 </Solution>
