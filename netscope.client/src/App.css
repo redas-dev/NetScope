@@ -934,11 +934,12 @@ tbody tr:hover {
   max-height: calc(100svh - 48px);
   color: var(--text);
   box-shadow: 0 30px 90px #0e272946;
-  animation: appear 0.2s ease-out;
+}
+.modal[open] {
+  animation: modal-enter 120ms ease-out;
 }
 .modal::backdrop {
   background: #0e252b77;
-  backdrop-filter: blur(3px);
 }
 .modal-wide {
   width: min(740px, calc(100% - 32px));
@@ -1213,6 +1214,14 @@ tbody tr:hover {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 @keyframes appear {
