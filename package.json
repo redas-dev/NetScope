@@ -5,7 +5,8 @@
   "description": "NetScope API demonstration and Postman verification",
   "scripts": {
     "test": "node scripts/demo.mjs",
-    "postman:generate": "node scripts/generate-postman.mjs"
+    "postman:generate": "node scripts/generate-postman.mjs",
+    "postman:test": "node --test tests/generate-postman.test.mjs"
   },
   "engines": {
     "node": ">=20"

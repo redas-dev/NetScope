@@ -202,9 +202,6 @@ function Shell() {
           </div>
           <div className="footer-links">
             <button onClick={() => setHelp(true)}>Kaip naudotis</button>
-            <a href="/wireframes.html" target="_blank" rel="noreferrer">
-              Sąsajos projektas <span className="sr-only">(naujame lange)</span>
-            </a>
             <span>© {new Date().getFullYear()} NetScope</span>
           </div>
         </div>

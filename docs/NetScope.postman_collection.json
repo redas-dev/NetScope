@@ -2,23 +2,23 @@
   "info": {
     "name": "NetScope - CRUD and JWT cookies",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Run the entire collection in order with zero delay. Captures HttpOnly JWT and refresh cookies, creates temporary users and removes them at the end. Requires seeded demo administrator."
+    "description": "Run the entire collection in order with zero delay. Uses explicit HttpOnly JWT and refresh cookies for each test account, creates temporary users and removes them at the end. Requires a valid administrator configured in adminEmail and adminPassword; demo data is not required."
   },
   "protocolProfileBehavior": {
-    "disableCookieJar": true
+    "disableCookies": true
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:5220"
+      "value": "https://netscope.redasd.dev"
     },
     {
       "key": "adminEmail",
-      "value": "admin@netscope.local"
+      "value": "redas@netscope.dev"
     },
     {
       "key": "adminPassword",
-      "value": "NetScopeDemo!2026"
+      "value": "Netscope123"
     }
   ],
   "event": [
@@ -27,12 +27,15 @@
       "script": {
         "type": "text/javascript",
         "exec": [
+          "const runtimeKeys = [\"ownerEmail\",\"otherEmail\",\"password\",\"ownerId\",\"ownerToken\",\"otherId\",\"otherToken\",\"adminId\",\"adminToken\",\"staleOwnerToken\",\"locationId\",\"secondLocationId\",\"deviceId\",\"clientId\"];",
           "if (pm.info.requestName === 'API and PostgreSQL health') {",
+          "  runtimeKeys.forEach(key => pm.collectionVariables.set(key, ''));",
           "  const run = pm.variables.replaceIn('{{$guid}}');",
           "  pm.collectionVariables.set('ownerEmail', 'demo-' + run + '@example.test');",
           "  pm.collectionVariables.set('otherEmail', 'other-' + run + '@example.test');",
           "  pm.collectionVariables.set('password', 'Demo!' + run);",
-          "}"
+          "}",
+          "runtimeKeys.forEach(key => pm.variables.set(key, pm.collectionVariables.get(key)));"
         ]
       }
     }
@@ -40,16 +43,15 @@
   "item": [
     {
       "name": "API and PostgreSQL health",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "GET",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": ""
           }
         ],
         "auth": {
@@ -65,7 +67,8 @@
             "exec": [
               "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test(\"status\", () => pm.expect(at(body, \"status\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"healthy\\\"\"))));"
             ]
@@ -75,16 +78,15 @@
     },
     {
       "name": "Protected endpoint without cookie",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "GET",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": ""
           }
         ],
         "auth": {
@@ -100,7 +102,8 @@
             "exec": [
               "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(401));"
             ]
@@ -110,16 +113,15 @@
     },
     {
       "name": "Reject role escalation during registration",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "POST",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": ""
           }
         ],
         "auth": {
@@ -144,7 +146,8 @@
             "exec": [
               "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
             ]
@@ -154,16 +157,15 @@
     },
     {
       "name": "Register owner",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "POST",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": ""
           }
         ],
         "auth": {
@@ -188,13 +190,14 @@
             "exec": [
               "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
-              "pm.collectionVariables.set(\"ownerId\", at(body, \"user.id\"));",
+              "save(\"ownerId\", at(body, \"user.id\"));",
               "const cookiePairs = pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').flatMap(h => Array.from(h.value.matchAll(/netscope_(?:access|refresh)=[^;,\\s]+/g), m => m[0]));",
               "pm.test('HttpOnly JWT and refresh cookies', () => { pm.expect(cookiePairs.length).to.eql(2); pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').forEach(h => { pm.expect(h.value).to.match(/HttpOnly/i); pm.expect(h.value).to.match(/SameSite=Strict/i); }); });",
-              "pm.collectionVariables.set(\"ownerToken\", cookiePairs.join('; '));",
+              "save(\"ownerToken\", cookiePairs.join('; '));",
               "pm.test(\"user.role\", () => pm.expect(at(body, \"user.role\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"User\\\"\"))));",
               "pm.test('No secret fields', () => pm.expect(at(body, \"accessToken\")).to.be.undefined);"
             ]
@@ -204,16 +207,15 @@
     },
     {
       "name": "Duplicate email",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "POST",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": ""
           }
         ],
         "auth": {
@@ -238,7 +240,8 @@
             "exec": [
               "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(409));"
             ]
@@ -248,16 +251,15 @@
     },
     {
       "name": "Wrong password",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "POST",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": ""
           }
         ],
         "auth": {
@@ -282,7 +284,8 @@
             "exec": [
               "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(401));"
             ]
@@ -292,16 +295,15 @@
     },
     {
       "name": "Login owner",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "POST",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": ""
           }
         ],
         "auth": {
@@ -326,11 +328,12 @@
             "exec": [
               "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "const cookiePairs = pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').flatMap(h => Array.from(h.value.matchAll(/netscope_(?:access|refresh)=[^;,\\s]+/g), m => m[0]));",
               "pm.test('HttpOnly JWT and refresh cookies', () => { pm.expect(cookiePairs.length).to.eql(2); pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').forEach(h => { pm.expect(h.value).to.match(/HttpOnly/i); pm.expect(h.value).to.match(/SameSite=Strict/i); }); });",
-              "pm.collectionVariables.set(\"ownerToken\", cookiePairs.join('; '));",
+              "save(\"ownerToken\", cookiePairs.join('; '));",
               "pm.test('No secret fields', () => pm.expect(at(body, \"accessToken\")).to.be.undefined);",
               "pm.test('JWT role', () => { const cookie = pm.collectionVariables.get(\"ownerToken\"); const jwt = /netscope_access=([^;]+)/.exec(cookie)[1]; pm.expect(JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role).to.eql(\"User\"); });"
             ]
@@ -340,16 +343,15 @@
     },
     {
       "name": "Register another user",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "POST",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": ""
           }
         ],
         "auth": {
@@ -374,13 +376,14 @@
             "exec": [
               "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
-              "pm.collectionVariables.set(\"otherId\", at(body, \"user.id\"));",
+              "save(\"otherId\", at(body, \"user.id\"));",
               "const cookiePairs = pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').flatMap(h => Array.from(h.value.matchAll(/netscope_(?:access|refresh)=[^;,\\s]+/g), m => m[0]));",
               "pm.test('HttpOnly JWT and refresh cookies', () => { pm.expect(cookiePairs.length).to.eql(2); pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').forEach(h => { pm.expect(h.value).to.match(/HttpOnly/i); pm.expect(h.value).to.match(/SameSite=Strict/i); }); });",
-              "pm.collectionVariables.set(\"otherToken\", cookiePairs.join('; '));",
+              "save(\"otherToken\", cookiePairs.join('; '));",
               "pm.test('No secret fields', () => pm.expect(at(body, \"accessToken\")).to.be.undefined);"
             ]
           }
@@ -389,16 +392,15 @@
     },
     {
       "name": "Login administrator",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "POST",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": ""
           }
         ],
         "auth": {
@@ -423,12 +425,13 @@
             "exec": [
               "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
-              "pm.collectionVariables.set(\"adminId\", at(body, \"user.id\"));",
+              "save(\"adminId\", at(body, \"user.id\"));",
               "const cookiePairs = pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').flatMap(h => Array.from(h.value.matchAll(/netscope_(?:access|refresh)=[^;,\\s]+/g), m => m[0]));",
               "pm.test('HttpOnly JWT and refresh cookies', () => { pm.expect(cookiePairs.length).to.eql(2); pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').forEach(h => { pm.expect(h.value).to.match(/HttpOnly/i); pm.expect(h.value).to.match(/SameSite=Strict/i); }); });",
-              "pm.collectionVariables.set(\"adminToken\", cookiePairs.join('; '));",
+              "save(\"adminToken\", cookiePairs.join('; '));",
               "pm.test('No secret fields', () => pm.expect(at(body, \"accessToken\")).to.be.undefined);",
               "pm.test('JWT role', () => { const cookie = pm.collectionVariables.get(\"adminToken\"); const jwt = /netscope_access=([^;]+)/.exec(cookie)[1]; pm.expect(JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role).to.eql(\"Admin\"); });"
             ]
@@ -438,6 +441,9 @@
     },
     {
       "name": "Current user",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "GET",
         "header": [
@@ -463,7 +469,8 @@
             "exec": [
               "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test(\"id\", () => pm.expect(at(body, \"id\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{ownerId}}\\\"\"))));",
               "pm.test(\"role\", () => pm.expect(at(body, \"role\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"User\\\"\"))));"
@@ -474,6 +481,9 @@
     },
     {
       "name": "Cross-origin cookie write is rejected",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "POST",
         "header": [
@@ -512,7 +522,8 @@
             "exec": [
               "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
             ]
@@ -522,6 +533,9 @@
     },
     {
       "name": "Refresh owner session",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "POST",
         "header": [
@@ -547,12 +561,13 @@
             "exec": [
               "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
-              "pm.collectionVariables.set(\"staleOwnerToken\", pm.collectionVariables.get(\"ownerToken\"));",
+              "save(\"staleOwnerToken\", pm.collectionVariables.get(\"ownerToken\"));",
               "const cookiePairs = pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').flatMap(h => Array.from(h.value.matchAll(/netscope_(?:access|refresh)=[^;,\\s]+/g), m => m[0]));",
               "pm.test('HttpOnly JWT and refresh cookies', () => { pm.expect(cookiePairs.length).to.eql(2); pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').forEach(h => { pm.expect(h.value).to.match(/HttpOnly/i); pm.expect(h.value).to.match(/SameSite=Strict/i); }); });",
-              "pm.collectionVariables.set(\"ownerToken\", cookiePairs.join('; '));",
+              "save(\"ownerToken\", cookiePairs.join('; '));",
               "pm.test(\"user.id\", () => pm.expect(at(body, \"user.id\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{ownerId}}\\\"\"))));",
               "pm.test('JWT role', () => { const cookie = pm.collectionVariables.get(\"ownerToken\"); const jwt = /netscope_access=([^;]+)/.exec(cookie)[1]; pm.expect(JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role).to.eql(\"User\"); });"
             ]
@@ -562,6 +577,9 @@
     },
     {
       "name": "Reused refresh token is rejected",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "POST",
         "header": [
@@ -587,7 +605,8 @@
             "exec": [
               "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(401));"
             ]
@@ -596,80 +615,10 @@
       ]
     },
     {
-      "name": "Overview joins locations and devices",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/overview"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test(\"locationCount\", () => pm.expect(at(body, \"locationCount\")).not.to.be.undefined);",
-              "pm.test(\"deviceCount\", () => pm.expect(at(body, \"deviceCount\")).not.to.be.undefined);",
-              "pm.test(\"recentLocations.0.deviceCount\", () => pm.expect(at(body, \"recentLocations.0.deviceCount\")).not.to.be.undefined);",
-              "pm.test(\"links.self.href\", () => pm.expect(at(body, \"links.self.href\")).not.to.be.undefined);"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Pagination links preserve filters",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations?search=KTU&pageSize=1"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test(\"links.next.href\", () => pm.expect(at(body, \"links.next.href\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"/api/locations?search=KTU&page=2&pageSize=1\\\"\"))));"
-            ]
-          }
-        }
-      ]
-    },
-    {
       "name": "01 Create location",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "POST",
         "header": [
@@ -704,10 +653,11 @@
             "exec": [
               "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
-              "pm.collectionVariables.set(\"locationId\", at(body, \"id\"));",
+              "save(\"locationId\", at(body, \"id\"));",
               "pm.test(\"ownerId\", () => pm.expect(at(body, \"ownerId\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{ownerId}}\\\"\"))));"
             ]
           }
@@ -715,1602 +665,10 @@
       ]
     },
     {
-      "name": "02 List and filter locations",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations?search=Demo&ownerId={{ownerId}}&pageSize=1"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test(\"total\", () => pm.expect(at(body, \"total\")).to.eql(JSON.parse(pm.variables.replaceIn(\"1\"))));",
-              "pm.test(\"items.0.id\", () => pm.expect(at(body, \"items.0.id\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{locationId}}\\\"\"))));",
-              "pm.test(\"pageSize\", () => pm.expect(at(body, \"pageSize\")).to.eql(JSON.parse(pm.variables.replaceIn(\"1\"))));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "03 Read location",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Demo laboratorija\\\"\"))));",
-              "pm.test(\"links.self.href\", () => pm.expect(at(body, \"links.self.href\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"/api/locations/{{locationId}}\\\"\"))));",
-              "pm.test(\"links.devices.href\", () => pm.expect(at(body, \"links.devices.href\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"/api/locations/{{locationId}}/devices\\\"\"))));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "04 Update location",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Atnaujinta laboratorija\",\n  \"address\": \"Studentų g. 50, Kaunas\",\n  \"description\": \"Automatinė API demonstracija\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Atnaujinta laboratorija\\\"\"))));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "05 Create device",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
-              "pm.collectionVariables.set(\"deviceId\", at(body, \"id\"));",
-              "pm.test(\"locationId\", () => pm.expect(at(body, \"locationId\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{locationId}}\\\"\"))));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "06 List and filter devices",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices?type=Router&status=Online&search=Demo"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test(\"total\", () => pm.expect(at(body, \"total\")).to.eql(JSON.parse(pm.variables.replaceIn(\"1\"))));",
-              "pm.test(\"items.0.id\", () => pm.expect(at(body, \"items.0.id\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{deviceId}}\\\"\"))));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "07 Read device",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test(\"ipAddress\", () => pm.expect(at(body, \"ipAddress\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"10.10.0.1\\\"\"))));",
-              "pm.test(\"links.clients.href\", () => pm.expect(at(body, \"links.clients.href\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"/api/locations/{{locationId}}/devices/{{deviceId}}/clients\\\"\"))));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "08 Update device",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Maintenance\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test(\"status\", () => pm.expect(at(body, \"status\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Maintenance\\\"\"))));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "09 Create client",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
-              "pm.collectionVariables.set(\"clientId\", at(body, \"id\"));",
-              "pm.test(\"deviceId\", () => pm.expect(at(body, \"deviceId\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{deviceId}}\\\"\"))));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "10 List and filter clients",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients?type=Computer&search=Demo"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test(\"total\", () => pm.expect(at(body, \"total\")).to.eql(JSON.parse(pm.variables.replaceIn(\"1\"))));",
-              "pm.test(\"items.0.id\", () => pm.expect(at(body, \"items.0.id\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{clientId}}\\\"\"))));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "11 Read client",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Demo kompiuteris\\\"\"))));",
-              "pm.test(\"links.device.href\", () => pm.expect(at(body, \"links.device.href\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"/api/locations/{{locationId}}/devices/{{deviceId}}\\\"\"))));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "12 Update client",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Atnaujintas kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Atnaujintas kompiuteris\\\"\"))));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Other user can read locations",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{otherToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Other user can read devices",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{otherToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Cannot update another user location",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{otherToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo laboratorija\",\n  \"address\": \"Studentų g. 50, Kaunas\",\n  \"description\": \"Automatinė API demonstracija\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Cannot delete another user location",
-      "request": {
-        "method": "DELETE",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{otherToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Cannot create device in another user location",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{otherToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Cannot update another user device",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{otherToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Cannot delete another user device",
-      "request": {
-        "method": "DELETE",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{otherToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Protect client collection GET",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{otherToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Protect client collection POST",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{otherToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Protect individual client GET",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{otherToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Protect individual client PUT",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{otherToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Protect individual client DELETE",
-      "request": {
-        "method": "DELETE",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{otherToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Admin can read private clients",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{adminToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Admin can update another user location",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{adminToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo laboratorija\",\n  \"address\": \"Studentų g. 50, Kaunas\",\n  \"description\": \"Automatinė API demonstracija\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Admin can update another user device",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{adminToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Admin can update another user client",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{adminToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Reject missing required fields",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations",
-        "body": {
-          "mode": "raw",
-          "raw": "{}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Reject blank name",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"   \",\n  \"address\": \"Studentų g. 50, Kaunas\",\n  \"description\": \"Automatinė API demonstracija\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Reject malformed JSON",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations",
-        "body": {
-          "mode": "raw",
-          "raw": "{bad json",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Reject invalid IP",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"not-an-ip\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Reject invalid MAC",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"invalid\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Reject invalid enum",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Invalid\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Reject invalid pagination",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations?page=0&pageSize=101"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Reject invalid query filter",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices?status=Invalid"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Duplicate device MAC",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(409));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Duplicate client MAC",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(409));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Unknown location returns 404",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/00000000-0000-0000-0000-000000000000"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Unknown device returns 404",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/00000000-0000-0000-0000-000000000000"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Unknown client returns 404",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Cookie",
-            "value": "{{ownerToken}}"
-          }
-        ],
-        "auth": {
-          "type": "noauth"
-        },
-        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/00000000-0000-0000-0000-000000000000"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
-              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
-              "const body = pm.response.json();",
-              "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
-            ]
-          }
-        }
-      ]
-    },
-    {
       "name": "Create second location for nesting test",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "POST",
         "header": [
@@ -2345,10 +703,1848 @@
             "exec": [
               "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
-              "pm.collectionVariables.set(\"secondLocationId\", at(body, \"id\"));"
+              "save(\"secondLocationId\", at(body, \"id\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Overview joins locations and devices",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/overview"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test(\"locationCount\", () => pm.expect(at(body, \"locationCount\")).not.to.be.undefined);",
+              "pm.test(\"deviceCount\", () => pm.expect(at(body, \"deviceCount\")).not.to.be.undefined);",
+              "pm.test(\"recentLocations.0.deviceCount\", () => pm.expect(at(body, \"recentLocations.0.deviceCount\")).not.to.be.undefined);",
+              "pm.test(\"links.self.href\", () => pm.expect(at(body, \"links.self.href\")).not.to.be.undefined);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pagination links preserve filters",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations?ownerId={{ownerId}}&pageSize=1"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test(\"total\", () => pm.expect(at(body, \"total\")).to.eql(JSON.parse(pm.variables.replaceIn(\"2\"))));",
+              "pm.test(\"links.next.href\", () => pm.expect(at(body, \"links.next.href\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"/api/locations?ownerId={{ownerId}}&page=2&pageSize=1\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 List and filter locations",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations?search=Demo&ownerId={{ownerId}}&pageSize=1"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test(\"total\", () => pm.expect(at(body, \"total\")).to.eql(JSON.parse(pm.variables.replaceIn(\"1\"))));",
+              "pm.test(\"items.0.id\", () => pm.expect(at(body, \"items.0.id\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{locationId}}\\\"\"))));",
+              "pm.test(\"pageSize\", () => pm.expect(at(body, \"pageSize\")).to.eql(JSON.parse(pm.variables.replaceIn(\"1\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Read location",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Demo laboratorija\\\"\"))));",
+              "pm.test(\"links.self.href\", () => pm.expect(at(body, \"links.self.href\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"/api/locations/{{locationId}}\\\"\"))));",
+              "pm.test(\"links.devices.href\", () => pm.expect(at(body, \"links.devices.href\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"/api/locations/{{locationId}}/devices\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Update location",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Atnaujinta laboratorija\",\n  \"address\": \"Studentų g. 50, Kaunas\",\n  \"description\": \"Automatinė API demonstracija\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Atnaujinta laboratorija\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Create device",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
+              "save(\"deviceId\", at(body, \"id\"));",
+              "pm.test(\"locationId\", () => pm.expect(at(body, \"locationId\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{locationId}}\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 List and filter devices",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices?type=Router&status=Online&search=Demo"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test(\"total\", () => pm.expect(at(body, \"total\")).to.eql(JSON.parse(pm.variables.replaceIn(\"1\"))));",
+              "pm.test(\"items.0.id\", () => pm.expect(at(body, \"items.0.id\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{deviceId}}\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Read device",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test(\"ipAddress\", () => pm.expect(at(body, \"ipAddress\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"10.10.0.1\\\"\"))));",
+              "pm.test(\"links.clients.href\", () => pm.expect(at(body, \"links.clients.href\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"/api/locations/{{locationId}}/devices/{{deviceId}}/clients\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Update device",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Maintenance\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test(\"status\", () => pm.expect(at(body, \"status\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Maintenance\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Create client",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.be.ok);",
+              "save(\"clientId\", at(body, \"id\"));",
+              "pm.test(\"deviceId\", () => pm.expect(at(body, \"deviceId\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{deviceId}}\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 List and filter clients",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients?type=Computer&search=Demo"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test(\"total\", () => pm.expect(at(body, \"total\")).to.eql(JSON.parse(pm.variables.replaceIn(\"1\"))));",
+              "pm.test(\"items.0.id\", () => pm.expect(at(body, \"items.0.id\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{clientId}}\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Read client",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Demo kompiuteris\\\"\"))));",
+              "pm.test(\"links.device.href\", () => pm.expect(at(body, \"links.device.href\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"/api/locations/{{locationId}}/devices/{{deviceId}}\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Update client",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Atnaujintas kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test(\"name\", () => pm.expect(at(body, \"name\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"Atnaujintas kompiuteris\\\"\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Other user can read locations",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Other user can read devices",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cannot update another user location",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo laboratorija\",\n  \"address\": \"Studentų g. 50, Kaunas\",\n  \"description\": \"Automatinė API demonstracija\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cannot delete another user location",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cannot create device in another user location",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cannot update another user device",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cannot delete another user device",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Protect client collection GET",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Protect client collection POST",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Protect individual client GET",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Protect individual client PUT",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Protect individual client DELETE",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin can read private clients",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{adminToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin can update another user location",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{adminToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo laboratorija\",\n  \"address\": \"Studentų g. 50, Kaunas\",\n  \"description\": \"Automatinė API demonstracija\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin can update another user device",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{adminToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin can update another user client",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{adminToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/{{clientId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject missing required fields",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject blank name",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"   \",\n  \"address\": \"Studentų g. 50, Kaunas\",\n  \"description\": \"Automatinė API demonstracija\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject malformed JSON",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations",
+        "body": {
+          "mode": "raw",
+          "raw": "{bad json",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid IP",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"not-an-ip\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid MAC",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"invalid\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid enum",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Invalid\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid pagination",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations?page=0&pageSize=101"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid query filter",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices?status=Invalid"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Duplicate device MAC",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo maršrutizatorius\",\n  \"type\": \"Router\",\n  \"ipAddress\": \"10.10.0.1\",\n  \"macAddress\": \"02:AA:00:00:00:01\",\n  \"status\": \"Online\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Duplicate client MAC",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo kompiuteris\",\n  \"type\": \"Computer\",\n  \"ipAddress\": \"10.10.0.10\",\n  \"macAddress\": \"02:BB:00:00:00:01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unknown location returns 404",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/00000000-0000-0000-0000-000000000000"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unknown device returns 404",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/00000000-0000-0000-0000-000000000000"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unknown client returns 404",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{ownerToken}}"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/locations/{{locationId}}/devices/{{deviceId}}/clients/00000000-0000-0000-0000-000000000000"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
+              "const body = pm.response.json();",
+              "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
             ]
           }
         }
@@ -2356,6 +2552,9 @@
     },
     {
       "name": "Device cannot be accessed under wrong location",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "GET",
         "header": [
@@ -2381,7 +2580,8 @@
             "exec": [
               "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
             ]
@@ -2391,6 +2591,9 @@
     },
     {
       "name": "Client cannot be accessed under wrong location",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "GET",
         "header": [
@@ -2416,7 +2619,8 @@
             "exec": [
               "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
             ]
@@ -2426,6 +2630,9 @@
     },
     {
       "name": "13 Delete client",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "DELETE",
         "header": [
@@ -2451,7 +2658,8 @@
             "exec": [
               "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
               "pm.test('Empty body', () => pm.expect(pm.response.text()).to.eql(''));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);"
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };"
             ]
           }
         }
@@ -2459,6 +2667,9 @@
     },
     {
       "name": "Deleted client is absent",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "GET",
         "header": [
@@ -2484,7 +2695,8 @@
             "exec": [
               "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
             ]
@@ -2494,6 +2706,9 @@
     },
     {
       "name": "14 Delete device",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "DELETE",
         "header": [
@@ -2519,7 +2734,8 @@
             "exec": [
               "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
               "pm.test('Empty body', () => pm.expect(pm.response.text()).to.eql(''));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);"
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };"
             ]
           }
         }
@@ -2527,6 +2743,9 @@
     },
     {
       "name": "Deleted device is absent",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "GET",
         "header": [
@@ -2552,7 +2771,8 @@
             "exec": [
               "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
             ]
@@ -2562,6 +2782,9 @@
     },
     {
       "name": "15 Delete location",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "DELETE",
         "header": [
@@ -2587,7 +2810,8 @@
             "exec": [
               "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
               "pm.test('Empty body', () => pm.expect(pm.response.text()).to.eql(''));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);"
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };"
             ]
           }
         }
@@ -2595,6 +2819,9 @@
     },
     {
       "name": "Deleted location is absent",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "GET",
         "header": [
@@ -2620,7 +2847,8 @@
             "exec": [
               "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
             ]
@@ -2630,6 +2858,9 @@
     },
     {
       "name": "Non-admin cannot list users",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "GET",
         "header": [
@@ -2655,7 +2886,8 @@
             "exec": [
               "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
             ]
@@ -2665,6 +2897,9 @@
     },
     {
       "name": "Non-admin cannot delete users",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "DELETE",
         "header": [
@@ -2690,7 +2925,8 @@
             "exec": [
               "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(403));"
             ]
@@ -2700,6 +2936,9 @@
     },
     {
       "name": "Admin lists users without password hashes",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "GET",
         "header": [
@@ -2725,7 +2964,8 @@
             "exec": [
               "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test(\"total\", () => pm.expect(at(body, \"total\")).to.eql(JSON.parse(pm.variables.replaceIn(\"1\"))));",
               "pm.test(\"items.0.id\", () => pm.expect(at(body, \"items.0.id\")).to.eql(JSON.parse(pm.variables.replaceIn(\"\\\"{{ownerId}}\\\"\"))));",
@@ -2737,6 +2977,9 @@
     },
     {
       "name": "Admin cannot delete own account",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "DELETE",
         "header": [
@@ -2762,7 +3005,8 @@
             "exec": [
               "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(409));"
             ]
@@ -2772,6 +3016,9 @@
     },
     {
       "name": "Logout owner",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "POST",
         "header": [
@@ -2797,7 +3044,8 @@
             "exec": [
               "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
               "pm.test('Empty body', () => pm.expect(pm.response.text()).to.eql(''));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);"
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };"
             ]
           }
         }
@@ -2805,6 +3053,9 @@
     },
     {
       "name": "Logged-out JWT is rejected",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "GET",
         "header": [
@@ -2830,7 +3081,8 @@
             "exec": [
               "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(401));"
             ]
@@ -2840,6 +3092,9 @@
     },
     {
       "name": "Admin deletes owner and remaining location",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "DELETE",
         "header": [
@@ -2865,7 +3120,8 @@
             "exec": [
               "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
               "pm.test('Empty body', () => pm.expect(pm.response.text()).to.eql(''));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);"
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };"
             ]
           }
         }
@@ -2873,6 +3129,9 @@
     },
     {
       "name": "User deletion cascades to locations",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "GET",
         "header": [
@@ -2898,7 +3157,8 @@
             "exec": [
               "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(404));"
             ]
@@ -2908,6 +3168,9 @@
     },
     {
       "name": "Admin deletes second user",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "DELETE",
         "header": [
@@ -2933,7 +3196,8 @@
             "exec": [
               "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
               "pm.test('Empty body', () => pm.expect(pm.response.text()).to.eql(''));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);"
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };"
             ]
           }
         }
@@ -2941,6 +3205,9 @@
     },
     {
       "name": "Deleted user JWT is rejected",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "GET",
         "header": [
@@ -2966,7 +3233,8 @@
             "exec": [
               "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
               "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/(problem\\+)?json/));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);",
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };",
               "const body = pm.response.json();",
               "pm.test('Problem status', () => pm.expect(body.status).to.eql(401));"
             ]
@@ -2976,6 +3244,9 @@
     },
     {
       "name": "Logout administrator",
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      },
       "request": {
         "method": "POST",
         "header": [
@@ -3001,7 +3272,8 @@
             "exec": [
               "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
               "pm.test('Empty body', () => pm.expect(pm.response.text()).to.eql(''));",
-              "const at = (o, p) => p.split('.').reduce((v, k) => v && v[k], o);"
+              "const at = (o, p) => p.split('.').reduce((v, k) => v == null ? undefined : v[k], o);",
+              "const save = (key, value) => { pm.collectionVariables.set(key, value); pm.variables.set(key, value); };"
             ]
           }
         }
