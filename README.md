@@ -16,7 +16,7 @@ NetScope skirta tinklo infrastruktūrai registruoti, tvarkyti ir stebėti vienoj
 
 ## 2. Sistemos architektūra
 
-![2.1 pav. Sistemos diegimo diagrama](docs/images/deployment-diagram.png)
+<img src="https://github.com/redas-dev/NetScope/blob/main/docs/images/deployment-diagram.jpg" />
 
 ## 3. Naudotojo sąsaja
 
