@@ -20,10 +20,12 @@ public class AuthController(NetScopeDbContext db, PasswordHasher<User> hasher, T
     {
         var email = request.Email.Trim().ToLowerInvariant();
         if (await Db.Users.AnyAsync(x => x.Email == email)) return Problem(statusCode: 409, title: "El. paštas jau naudojamas.");
+
         var user = new User { Email = email };
         user.PasswordHash = hasher.HashPassword(user, request.Password);
         Db.Users.Add(user);
         await Db.SaveChangesAsync();
+
         return CreatedAtAction(nameof(Me), await IssueSession(user));
     }
 
@@ -34,8 +36,10 @@ public class AuthController(NetScopeDbContext db, PasswordHasher<User> hasher, T
     {
         var email = request.Email.Trim().ToLowerInvariant();
         var user = await Db.Users.SingleOrDefaultAsync(x => x.Email == email);
+
         if (user is null || hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
             return Problem(statusCode: 401, title: "Neteisingas el. paštas arba slaptažodis.");
+
         return Ok(await IssueSession(user));
     }
 
@@ -46,6 +50,7 @@ public class AuthController(NetScopeDbContext db, PasswordHasher<User> hasher, T
     {
         var raw = Request.Cookies[TokenService.RefreshCookie];
         if (string.IsNullOrWhiteSpace(raw)) return Problem(statusCode: 401, title: "Atnaujinimo žetono nėra.");
+
         var hash = TokenService.HashRefreshToken(raw);
         var now = DateTime.UtcNow;
         var current = await Db.RefreshTokens.AsNoTracking().Include(x => x.User)
@@ -53,12 +58,15 @@ public class AuthController(NetScopeDbContext db, PasswordHasher<User> hasher, T
         if (current is null)
         {
             TokenService.ClearCookies(Response, environment);
+
             return Problem(statusCode: 401, title: "Atnaujinimo žetonas nebegalioja.");
         }
 
         await using var transaction = await Db.Database.BeginTransactionAsync();
         var consumed = await Db.RefreshTokens.Where(x => x.TokenHash == hash && x.ExpiresAt > now).ExecuteDeleteAsync();
+
         if (consumed != 1) return Problem(statusCode: 401, title: "Atnaujinimo žetonas jau panaudotas.");
+
         var nextRefresh = TokenService.NewRefreshToken();
         var refreshExpires = now.Add(TokenService.RefreshLifetime);
         Db.RefreshTokens.Add(new RefreshToken
@@ -69,6 +77,7 @@ public class AuthController(NetScopeDbContext db, PasswordHasher<User> hasher, T
         await transaction.CommitAsync();
         var access = tokens.Create(current.User);
         TokenService.SetCookies(Response, environment, access.Value, access.ExpiresAt, nextRefresh, refreshExpires);
+
         return Ok(new SessionResponse(new(current.User.Id, current.User.Email, current.User.Role), access.ExpiresAt));
     }
 
@@ -78,6 +87,7 @@ public class AuthController(NetScopeDbContext db, PasswordHasher<User> hasher, T
     public async Task<IActionResult> Me()
     {
         var user = await Db.Users.SingleAsync(x => x.Id == CurrentUserId);
+
         return Ok(new UserResponse(user.Id, user.Email, user.Role));
     }
 
@@ -96,6 +106,7 @@ public class AuthController(NetScopeDbContext db, PasswordHasher<User> hasher, T
             await Db.SaveChangesAsync();
         }
         TokenService.ClearCookies(Response, environment);
+
         return NoContent();
     }
 
@@ -113,6 +124,7 @@ public class AuthController(NetScopeDbContext db, PasswordHasher<User> hasher, T
         await Db.SaveChangesAsync();
         var access = tokens.Create(user);
         TokenService.SetCookies(Response, environment, access.Value, access.ExpiresAt, refresh, refreshExpires);
+
         return new SessionResponse(new(user.Id, user.Email, user.Role), access.ExpiresAt);
     }
 }

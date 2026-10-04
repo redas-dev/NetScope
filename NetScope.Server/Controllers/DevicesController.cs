@@ -18,10 +18,12 @@ public class DevicesController(NetScopeDbContext db) : ApiControllerBase(db)
         [FromQuery, RegularExpression("^(Online|Offline|Maintenance)$")] string? status)
     {
         if (await FindLocation(locationId) is null) return NotFound();
+
         var query = Db.Devices.AsNoTracking().Where(x => x.LocationId == locationId);
         if (!string.IsNullOrWhiteSpace(filter.Search)) query = query.Where(x => x.Name.ToLower().Contains(filter.Search.ToLower()) || x.IpAddress.Contains(filter.Search));
         if (type is not null) query = query.Where(x => x.Type == type);
         if (status is not null) query = query.Where(x => x.Status == status);
+
         return Ok(await Page(query.OrderBy(x => x.Name).ThenBy(x => x.Id), filter, View));
     }
 
@@ -31,6 +33,7 @@ public class DevicesController(NetScopeDbContext db) : ApiControllerBase(db)
     public async Task<IActionResult> Get(Guid locationId, Guid deviceId)
     {
         var device = await FindDevice(locationId, deviceId);
+
         return device is null ? NotFound() : Ok(View(device));
     }
 
@@ -40,12 +43,15 @@ public class DevicesController(NetScopeDbContext db) : ApiControllerBase(db)
     public async Task<IActionResult> Create(Guid locationId, DeviceRequest request)
     {
         var location = await FindLocation(locationId);
+
         if (location is null) return NotFound();
         if (!CanManage(location)) return Forbid();
+
         var device = new NetworkDevice { LocationId = locationId };
         Assign(device, request);
         Db.Devices.Add(device);
         await Db.SaveChangesAsync();
+
         return CreatedAtAction(nameof(Get), new { locationId, deviceId = device.Id }, View(device));
     }
 
@@ -55,10 +61,13 @@ public class DevicesController(NetScopeDbContext db) : ApiControllerBase(db)
     public async Task<IActionResult> Update(Guid locationId, Guid deviceId, DeviceRequest request)
     {
         var device = await FindDevice(locationId, deviceId);
+
         if (device is null) return NotFound();
         if (!CanManage(device.Location)) return Forbid();
+
         Assign(device, request);
         await Db.SaveChangesAsync();
+
         return Ok(View(device));
     }
 
@@ -68,10 +77,13 @@ public class DevicesController(NetScopeDbContext db) : ApiControllerBase(db)
     public async Task<IActionResult> Delete(Guid locationId, Guid deviceId)
     {
         var device = await FindDevice(locationId, deviceId);
+
         if (device is null) return NotFound();
         if (!CanManage(device.Location)) return Forbid();
+
         Db.Devices.Remove(device);
         await Db.SaveChangesAsync();
+
         return NoContent();
     }
 

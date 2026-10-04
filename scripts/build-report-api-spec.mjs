@@ -150,5 +150,5 @@ function yaml(value, depth = 0) {
   return scalar(value)
 }
 
-fs.writeFileSync('api-spec.yaml', `# NetScope API ataskaitos specifikacija. Pavyzdžių ID ir datos yra iliustraciniai.\n${yaml(spec)}\n`)
+fs.writeFileSync('api-spec.yaml', yaml(spec))
 console.log(`api-spec.yaml: ${Object.keys(cases).length} metodai`)

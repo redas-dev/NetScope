@@ -17,6 +17,7 @@ public class UsersController(NetScopeDbContext db) : ApiControllerBase(db)
     {
         var query = Db.Users.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(filter.Search)) query = query.Where(x => x.Email.Contains(filter.Search.ToLower()));
+
         return Ok(await Page(query.OrderBy(x => x.Email), filter, x => new UserResponse(x.Id, x.Email, x.Role)));
     }
 
@@ -26,10 +27,13 @@ public class UsersController(NetScopeDbContext db) : ApiControllerBase(db)
     public async Task<IActionResult> Delete(Guid userId)
     {
         if (userId == CurrentUserId) return Problem(statusCode: 409, title: "Negalima pašalinti savo administratoriaus paskyros.");
+
         var user = await Db.Users.FindAsync(userId);
         if (user is null) return NotFound();
+
         Db.Users.Remove(user);
         await Db.SaveChangesAsync();
+
         return NoContent();
     }
 }

@@ -17,11 +17,14 @@ public class ClientsController(NetScopeDbContext db) : ApiControllerBase(db)
         [FromQuery, RegularExpression("^(Computer|Phone|Tablet|Printer|Other)$")] string? type)
     {
         var device = await FindDevice(locationId, deviceId);
+
         if (device is null) return NotFound();
         if (!CanManage(device.Location)) return Forbid();
+
         var query = Db.Clients.AsNoTracking().Where(x => x.DeviceId == deviceId);
         if (!string.IsNullOrWhiteSpace(filter.Search)) query = query.Where(x => x.Name.ToLower().Contains(filter.Search.ToLower()) || x.IpAddress.Contains(filter.Search));
         if (type is not null) query = query.Where(x => x.Type == type);
+        
         return Ok(await Page(query.OrderBy(x => x.Name).ThenBy(x => x.Id), filter, x => View(x, locationId)));
     }
 
@@ -31,9 +34,12 @@ public class ClientsController(NetScopeDbContext db) : ApiControllerBase(db)
     public async Task<IActionResult> Get(Guid locationId, Guid deviceId, Guid clientId)
     {
         var device = await FindDevice(locationId, deviceId);
+
         if (device is null) return NotFound();
         if (!CanManage(device.Location)) return Forbid();
+
         var client = await Db.Clients.SingleOrDefaultAsync(x => x.Id == clientId && x.DeviceId == deviceId);
+       
         return client is null ? NotFound() : Ok(View(client, locationId));
     }
 
@@ -43,12 +49,15 @@ public class ClientsController(NetScopeDbContext db) : ApiControllerBase(db)
     public async Task<IActionResult> Create(Guid locationId, Guid deviceId, ClientRequest request)
     {
         var device = await FindDevice(locationId, deviceId);
+
         if (device is null) return NotFound();
         if (!CanManage(device.Location)) return Forbid();
+
         var client = new NetworkClient { DeviceId = deviceId };
         Assign(client, request);
         Db.Clients.Add(client);
         await Db.SaveChangesAsync();
+
         return CreatedAtAction(nameof(Get), new { locationId, deviceId, clientId = client.Id }, View(client, locationId));
     }
 
@@ -58,12 +67,16 @@ public class ClientsController(NetScopeDbContext db) : ApiControllerBase(db)
     public async Task<IActionResult> Update(Guid locationId, Guid deviceId, Guid clientId, ClientRequest request)
     {
         var device = await FindDevice(locationId, deviceId);
+
         if (device is null) return NotFound();
         if (!CanManage(device.Location)) return Forbid();
+
         var client = await Db.Clients.SingleOrDefaultAsync(x => x.Id == clientId && x.DeviceId == deviceId);
         if (client is null) return NotFound();
+
         Assign(client, request);
         await Db.SaveChangesAsync();
+
         return Ok(View(client, locationId));
     }
 
@@ -73,12 +86,16 @@ public class ClientsController(NetScopeDbContext db) : ApiControllerBase(db)
     public async Task<IActionResult> Delete(Guid locationId, Guid deviceId, Guid clientId)
     {
         var device = await FindDevice(locationId, deviceId);
+
         if (device is null) return NotFound();
         if (!CanManage(device.Location)) return Forbid();
+
         var client = await Db.Clients.SingleOrDefaultAsync(x => x.Id == clientId && x.DeviceId == deviceId);
         if (client is null) return NotFound();
+
         Db.Clients.Remove(client);
         await Db.SaveChangesAsync();
+
         return NoContent();
     }
 

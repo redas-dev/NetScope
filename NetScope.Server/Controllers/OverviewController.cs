@@ -23,6 +23,7 @@ public class OverviewController(NetScopeDbContext db) : ApiControllerBase(db)
             .GroupBy(x => x.LocationId).Select(x => new { LocationId = x.Key, Count = x.Count() })
             .ToDictionaryAsync(x => x.LocationId, x => x.Count);
         var recent = locations.Select(x => new OverviewLocation(View(x), counts.GetValueOrDefault(x.Id))).ToList();
+
         return Ok(new OverviewResponse(locationCount, deviceCount, onlineDeviceCount, recent,
             new Dictionary<string, ResourceLink>
             {

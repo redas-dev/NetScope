@@ -17,6 +17,7 @@ public class LocationsController(NetScopeDbContext db) : ApiControllerBase(db)
         var query = Db.Locations.AsNoTracking();
         if (ownerId.HasValue) query = query.Where(x => x.OwnerId == ownerId);
         if (!string.IsNullOrWhiteSpace(filter.Search)) query = query.Where(x => x.Name.ToLower().Contains(filter.Search.ToLower()) || x.Address.ToLower().Contains(filter.Search.ToLower()));
+        
         return Ok(await Page(query.OrderBy(x => x.Name).ThenBy(x => x.Id), filter, View));
     }
 
@@ -26,6 +27,7 @@ public class LocationsController(NetScopeDbContext db) : ApiControllerBase(db)
     public async Task<IActionResult> Get(Guid locationId)
     {
         var location = await FindLocation(locationId);
+
         return location is null ? NotFound() : Ok(View(location));
     }
 
@@ -37,6 +39,7 @@ public class LocationsController(NetScopeDbContext db) : ApiControllerBase(db)
         var location = new Location { Name = request.Name.Trim(), Address = request.Address.Trim(), Description = request.Description?.Trim(), OwnerId = CurrentUserId };
         Db.Locations.Add(location);
         await Db.SaveChangesAsync();
+        
         return CreatedAtAction(nameof(Get), new { locationId = location.Id }, View(location));
     }
 
@@ -46,10 +49,13 @@ public class LocationsController(NetScopeDbContext db) : ApiControllerBase(db)
     public async Task<IActionResult> Update(Guid locationId, LocationRequest request)
     {
         var location = await FindLocation(locationId);
+
         if (location is null) return NotFound();
         if (!CanManage(location)) return Forbid();
+
         location.Name = request.Name.Trim(); location.Address = request.Address.Trim(); location.Description = request.Description?.Trim();
         await Db.SaveChangesAsync();
+        
         return Ok(View(location));
     }
 
@@ -59,10 +65,13 @@ public class LocationsController(NetScopeDbContext db) : ApiControllerBase(db)
     public async Task<IActionResult> Delete(Guid locationId)
     {
         var location = await FindLocation(locationId);
+
         if (location is null) return NotFound();
         if (!CanManage(location)) return Forbid();
+
         Db.Locations.Remove(location);
         await Db.SaveChangesAsync();
+
         return NoContent();
     }
 }

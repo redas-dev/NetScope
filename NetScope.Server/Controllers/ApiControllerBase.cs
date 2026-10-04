@@ -56,11 +56,13 @@ public abstract class ApiControllerBase(NetScopeDbContext db) : ControllerBase
             var parts = Request.Query.Where(x => x.Key is not "page" and not "pageSize")
                 .SelectMany(x => x.Value.Select(value => $"{Uri.EscapeDataString(x.Key)}={Uri.EscapeDataString(value ?? "")}"))
                 .Append($"page={page}").Append($"pageSize={filter.PageSize}");
+
             return $"{Request.Path}?{string.Join("&", parts)}";
         }
         var links = new Dictionary<string, ResourceLink> { ["self"] = new(PageHref(filter.Page), "GET") };
         if (filter.Page > 1) links["previous"] = new(PageHref(filter.Page - 1), "GET");
         if ((long)filter.Page * filter.PageSize < count) links["next"] = new(PageHref(filter.Page + 1), "GET");
+
         return new(items.Select(map).ToList(), count, filter.Page, filter.PageSize, links);
     }
 }
