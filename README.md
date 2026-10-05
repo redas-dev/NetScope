@@ -16,12 +16,48 @@ NetScope skirta tinklo infrastruktūrai registruoti, tvarkyti ir stebėti vienoj
 
 ## 2. Sistemos architektūra
 
-![2.1 pav. Sistemos diegimo diagrama](docs/images/deployment-diagram.png)
+<img src="https://github.com/redas-dev/NetScope/blob/main/docs/images/deployment-diagram.jpg" />
 
 ## 3. Naudotojo sąsaja
 
-Wireframes ir Screenshot'ai
+### 3.1.	Prisijungimo langas
+Įgyvendinimas:
+ <img width="1041" height="521" alt="image" src="https://github.com/user-attachments/assets/c639f572-bb21-4e1b-82cc-51ee0fa15301" />
+Wireframe:
+ <img width="1041" height="487" alt="image" src="https://github.com/user-attachments/assets/b0107847-e516-4691-b954-2e5602e0a77d" />
 
+### 3.2.	Pagrindinis langas
+Įgyvendinimas:
+ <img width="1041" height="521" alt="image" src="https://github.com/user-attachments/assets/0d82415a-0143-4d81-833b-478e244c8cbd" />
+Wireframe:
+ <img width="1041" height="489" alt="image" src="https://github.com/user-attachments/assets/23161b50-9f6d-4cc1-bfd2-18b8733c02d5" />
+ 
+#### 3.3.	Vietų langas
+Įgyvendinimas:
+ <img width="1041" height="514" alt="image" src="https://github.com/user-attachments/assets/806fb1f1-fc40-420f-a2e7-099af69fa87f" />
+Wireframe:
+ <img width="1041" height="489" alt="image" src="https://github.com/user-attachments/assets/7363afb5-725c-4465-a124-6b7f5d12dacd" />
+ 
+### 3.4.	Vietos informacijos langas
+ <img width="1041" height="514" alt="image" src="https://github.com/user-attachments/assets/63b35b7e-6e13-40e1-aee0-03b860367e4a" />
+ 
+### 3.5.	Įrenginio informacijos langas
+ <img width="1041" height="533" alt="image" src="https://github.com/user-attachments/assets/2f4c3732-71e5-40f6-b800-3cacec0e0850" />
+
+### 3.6.	Naujo įrenginio pridėjimo modalas
+ <img width="1041" height="653" alt="image" src="https://github.com/user-attachments/assets/373a1d7e-11b5-49db-b257-ba040b60a187" />
+
+### 3.7.	Šalinimo patvirtinimo modalas
+ <img width="1041" height="508" alt="image" src="https://github.com/user-attachments/assets/1ee17faf-eb49-44e6-bdfb-e23e224c106f" />
+
+### 3.8.	Pagalbos modalas
+ <img width="1041" height="522" alt="image" src="https://github.com/user-attachments/assets/745f6b46-e3ff-4355-b19d-cef67b48f2d4" />
+
+### 3.9.	Kliento informacijos
+ <img width="1041" height="636" alt="image" src="https://github.com/user-attachments/assets/e879e22b-fa0b-41c1-9b25-ab6e868f4d46" />
+
+### 3.10.	Naudotojų sąrašo langas
+ <img width="1041" height="538" alt="image" src="https://github.com/user-attachments/assets/69643357-eadf-45db-9697-22d63d330526" />
 
 ## 4. API specifikacija
 
@@ -101,14 +137,18 @@ Vietas papildomai galima filtruoti `ownerId`, įrenginius – `type` ir `status`
 
 ## 5. Projekto išvados
 
-1. Sukurta vietų, tinklo įrenginių ir klientų valdymo sistema su aiškia duomenų hierarchija ir 15 pagrindinių CRUD metodų.
-2. React sąsaja ir ASP.NET Core API leidžia registruoti, rasti ir tvarkyti infrastruktūros objektus.
-3. Implementuota JWT autentifikacija leidžia riboti tam tikras sistemos funkcijas pagal naudotojo rolę.
+1.	Sukurta tinklo infrastruktūros valdymo sistema „NetScope“, kurioje vietos, tinklo įrenginiai ir prie jų prijungti klientai susieti hierarchiniu duomenų modeliu, kad būtų aiški infrastruktūros struktūra. Tai leidžia vienoje sistemoje tvarkyti objektus ir nustatyti jų tarpusavio ryšius.
+2.	Panaudojant REST API vietoms, įrenginiams ir klientams sukurtos peržiūros, kūrimo, redagavimo bei šalinimo operacijos. Taip užtikrintas nuoseklus duomenų valdymas ir sudaryta galimybė sistemos funkcijas naudoti skirtingose programose.
+3.	Sukurta „React“ naudotojo sąsaja, susieta su „ASP.NET Core“ serveriu, leidžia naudotojui atlikti pagrindinius veiksmus ir peržiūrėti įrašytas įrenginių būsenas.
+4.	Įgyvendinta JWT autentifikacija ir prieigos kontrolė pagal roles bei objektų nuosavybę. Naudotojai gali keisti savo vietų duomenis ir susijusius objektus, o administratorius turi galimybę valdyti viską.
+5.	Duomenims saugoti panaudota „PostgreSQL“ duomenų bazė. Objektų ryšiai, MAC adresų unikalumo apribojimai ir įvesties tikrinimas padeda išvengti netinkamų bei pasikartojančių įrašų.
+6.	Įgyvendinta paieška, filtravimas ir sąrašų puslapiavimas. Šios funkcijos leidžia atrinkti aktualius objektus ir riboti vienu metu grąžinamų įrašų kiekį.
+
 
 ## Demonstraciniai duomenys
 
 | El. paštas | Rolė | Slaptažodis |
 | --- | --- | --- |
-| `admin@netscope.local` | Admin | `NetScopeDemo!2026` |
-| `redas@netscope.local` | User | `NetScopeDemo!2026` |
-| `ieva@netscope.local` | User | `NetScopeDemo!2026` |
+| `redas@netscope.dev` | Admin | `Netscope123` |
+| `asmuo@gmail.com` | User | `Netscope123` |
+| `asmuo2@gmail.com` | User | `Netscope123` |
