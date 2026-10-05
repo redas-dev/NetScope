@@ -59,6 +59,28 @@ public class LocationsController(NetScopeDbContext db) : ApiControllerBase(db)
         return Ok(View(location));
     }
 
+    [HttpPatch("{locationId:guid}")]
+    [EndpointSummary("Atnaujinti dali vietos")]
+    [ProducesResponseType<LocationResponse>(200)]
+    public async Task<IActionResult> Patch(Guid locationId, LocationRequest request)
+    {
+        var location = await FindLocation(locationId);
+
+        if (location is null) return NotFound();
+        if (!CanManage(location)) return Forbid();
+
+        if (request.Name.Trim() != null)
+            location.Name = request.Name.Trim(); 
+        if (request.Address.Trim() != null)
+            location.Address = request.Address.Trim();
+        if (request.Description?.Trim() != null)
+            location.Description = request.Description?.Trim();
+
+        await Db.SaveChangesAsync();
+
+        return Ok(View(location));
+    }
+
     [HttpDelete("{locationId:guid}")]
     [EndpointSummary("Pašalinti vietą kartu su įrenginiais ir klientais")]
     [ProducesResponseType(204)]
